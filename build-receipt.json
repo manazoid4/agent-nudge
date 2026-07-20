@@ -1,35 +1,38 @@
 {
   "schemaVersion": 1,
   "product": "Agent Nudge",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "date": "2026-07-20",
-  "branch": "agents/agent-nudge-mvp",
-  "sourceCommit": "48278ea",
+  "branch": "agents/context-mesh",
+  "sourceCommit": "3b240581eabebbfa3ec834d37bb2717b3298c230",
   "repository": "https://github.com/manazoid4/agent-nudge",
-  "issue": "https://github.com/manazoid4/agent-nudge/issues/1",
-  "production": "https://agent-nudge-manazir-s-projects1.vercel.app",
+  "issue": "https://github.com/manazoid4/agent-nudge/issues/2",
+  "production": "https://agent-nudge-bay.vercel.app",
+  "deploymentId": "dpl_3XGzcvQeMs1Ue8r18YFH9LLs4CUJ",
   "verification": {
     "lint": "passed",
     "format": "passed",
     "typecheck": "passed",
-    "unitTests": { "passed": 11, "total": 11 },
-    "integrationTests": { "passed": 8, "total": 8 },
+    "unitTests": { "passed": 17, "total": 17 },
+    "integrationTests": { "passed": 11, "total": 11 },
     "endToEndTests": { "passed": 2, "total": 2 },
     "cleanInstallBuild": "passed",
-    "productionAuditVulnerabilities": 0,
-    "portableSmokeTest": "passed-loopback-only",
-    "publicDemo": "ready-http-200-interaction-passed"
+    "auditVulnerabilities": 0,
+    "liveSyncProof": "hold-clear-dedupe-acknowledgement-cursor-passed",
+    "portableSmokeTest": "passed-v0.3.0-loopback-only",
+    "browserQa": "desktop-and-390px-mobile-passed",
+    "publicDemo": "ready-http-200-v0.3.0-verified"
   },
   "artifacts": [
     {
-      "path": "release/Agent-Nudge-Setup-0.1.0-x64.exe",
-      "bytes": 95210667,
-      "sha256": "966574E7EC4B225E0336450C6787B803334E5C5E082D261AF875BC1719350E56"
+      "path": "release/Agent-Nudge-Setup-0.3.0-x64.exe",
+      "bytes": 95177743,
+      "sha256": "2177721B69DEE800F9B1E0C493EDD74BEB167646981907917624140F3F854528"
     },
     {
-      "path": "release/Agent-Nudge-Portable-0.1.0-x64.exe",
-      "bytes": 94980720,
-      "sha256": "1E61F44322433C18F091FF0BE54649188805C00B986D54A2BBD3DBF04789A3C3"
+      "path": "release/Agent-Nudge-Portable-0.3.0-x64.exe",
+      "bytes": 94947825,
+      "sha256": "FDC97DB6BB631EBFD065B5F1B7EF539ADCAD30E3C6115E981E6E888CA64A2B2F"
     }
   ]
 }
