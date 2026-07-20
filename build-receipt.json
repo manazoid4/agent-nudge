@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "product": "Agent Nudge",
+  "version": "0.1.0",
+  "date": "2026-07-20",
+  "branch": "agents/agent-nudge-mvp",
+  "sourceCommit": "pending-first-commit",
+  "repository": "https://github.com/manazoid4/agent-nudge",
+  "issue": "https://github.com/manazoid4/agent-nudge/issues/1",
+  "production": "https://agent-nudge-manazir-s-projects1.vercel.app",
+  "verification": {
+    "lint": "passed",
+    "format": "passed",
+    "typecheck": "passed",
+    "unitTests": { "passed": 11, "total": 11 },
+    "integrationTests": { "passed": 8, "total": 8 },
+    "endToEndTests": { "passed": 2, "total": 2 },
+    "cleanInstallBuild": "passed",
+    "productionAuditVulnerabilities": 0,
+    "portableSmokeTest": "passed-loopback-only",
+    "publicDemo": "ready-http-200-interaction-passed"
+  },
+  "artifacts": [
+    {
+      "path": "release/Agent-Nudge-Setup-0.1.0-x64.exe",
+      "bytes": 95210667,
+      "sha256": "966574E7EC4B225E0336450C6787B803334E5C5E082D261AF875BC1719350E56"
+    },
+    {
+      "path": "release/Agent-Nudge-Portable-0.1.0-x64.exe",
+      "bytes": 94980720,
+      "sha256": "1E61F44322433C18F091FF0BE54649188805C00B986D54A2BBD3DBF04789A3C3"
+    }
+  ]
+}

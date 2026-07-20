@@ -1,0 +1,12 @@
+node_modules
+release*
+packaging-app*
+dist-node
+*.db
+*.db-*
+*.log
+tests
+electron
+scripts
+.git
+.impeccable

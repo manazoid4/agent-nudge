@@ -1,0 +1,13 @@
+node_modules/
+dist-web/
+dist-node/
+release*/
+packaging-app*/
+coverage/
+.vercel/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+.vercel

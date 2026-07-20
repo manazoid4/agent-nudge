@@ -1,0 +1,9 @@
+node_modules
+.vercel
+dist-web
+dist-node
+release*
+packaging-app*
+coverage
+package-lock.json
+*.log

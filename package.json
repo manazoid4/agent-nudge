@@ -1,0 +1,89 @@
+{
+  "name": "agent-nudge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre-action context assurance for AI coding agents",
+  "author": "manazoid4",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist-node/main.cjs",
+  "bin": {
+    "agent-nudge": "dist-node/cli.cjs",
+    "agent-nudge-mcp": "dist-node/mcp.cjs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:daemon": "tsx src/daemon/run.ts",
+    "dev:desktop": "npm run build && electron .",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "vitest run tests/e2e",
+    "build:web": "vite build",
+    "build": "vite build && tsup",
+    "package:win": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-win.ps1",
+    "smoke:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-release.ps1",
+    "demo": "tsx src/cli/index.ts demo",
+    "doctor": "tsx src/cli/index.ts doctor",
+    "start:daemon": "node dist-node/daemon.cjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "fastify": "^5.6.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.1",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "io.agentnudge.desktop",
+    "productName": "Agent Nudge",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-web/**/*",
+      "dist-node/**/*",
+      "package.json"
+    ],
+    "win": {
+      "artifactName": "Agent-Nudge-${version}-${arch}.${ext}",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "artifactName": "Agent-Nudge-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "Agent-Nudge-Portable-${version}-${arch}.${ext}"
+    }
+  }
+}

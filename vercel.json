@@ -1,0 +1,8 @@
+{
+  "framework": "vite",
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "npm run build:web",
+  "outputDirectory": "dist-web",
+  "cleanUrls": true,
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
