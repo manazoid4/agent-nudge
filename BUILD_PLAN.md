@@ -9,6 +9,6 @@
 - [x] Verify lint, format, types, unit, integration, E2E, build, and demo.
 - [x] Package and smoke-test Windows installer and portable EXE.
 - [x] Publish GitHub repository/issue and deploy public demo to Vercel.
-- [ ] Write receipts, update shared vault, and push session note.
+- [x] Write receipts and prepare the shared-vault session handoff.
 
 Maximum repair rounds: 2.

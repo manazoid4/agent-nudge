@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "date": "2026-07-20",
   "branch": "agents/agent-nudge-mvp",
-  "sourceCommit": "pending-first-commit",
+  "sourceCommit": "48278ea",
   "repository": "https://github.com/manazoid4/agent-nudge",
   "issue": "https://github.com/manazoid4/agent-nudge/issues/1",
   "production": "https://agent-nudge-manazir-s-projects1.vercel.app",

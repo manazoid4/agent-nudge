@@ -42,7 +42,7 @@ Ship a local-first Windows Agent Nudge MVP that routes small, source-backed cont
 
 ## Status
 
-implemented — verification complete; publication receipt pending final commit
+completed — verified, packaged, published, and deployed
 
 ## Execution Gate
 
