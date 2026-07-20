@@ -26,11 +26,20 @@ import {
   TerminalSquare,
   X,
 } from "lucide-react";
-import { sampleSnapshot } from "./sample-data.js";
+import { samplePortfolio, sampleSnapshot } from "./sample-data.js";
 
 type Snapshot = typeof sampleSnapshot;
+type Portfolio = typeof samplePortfolio;
+type PortfolioProject = Portfolio["projects"][number];
 type NudgeItem = Snapshot["nudges"][number];
-type View = "overview" | "inbox" | "agents" | "timeline" | "rules" | "settings";
+type View =
+  | "overview"
+  | "portfolio"
+  | "inbox"
+  | "agents"
+  | "timeline"
+  | "rules"
+  | "settings";
 
 const endpoint = window.agentNudge?.endpoint ?? "http://127.0.0.1:47831";
 const isDesktop =
@@ -54,8 +63,9 @@ function Landing() {
       <header className="site-nav shell">
         <Brand />
         <nav aria-label="Main navigation">
-          <a href="#proof">Product proof</a>
-          <a href="#how">How it works</a>
+          <a href="#proof">Live proof</a>
+          <a href="#how">Protocol</a>
+          <a href="#bridge">Agent bridge</a>
           <a href="#pricing">Pricing</a>
         </nav>
         <a className="button button-small" href="#demo">
@@ -67,17 +77,18 @@ function Landing() {
         <div className="hero-copy">
           <div className="signal-line">
             <span />
-            <strong>Local agent coordination</strong>
-            <span>Windows MVP</span>
+            <strong>Live Agent Bridge</strong>
+            <span>v0.3 · local first</span>
           </div>
-          <h1>Context before action.</h1>
+          <h1>Two agents. One repository. No stale decisions.</h1>
           <p className="hero-lede">
-            When Claude learns something Codex should know, Agent Nudge delivers
-            the smallest verified warning before the next consequential move.
+            Agent Nudge keeps Claude, Codex, and OpenCode on the same page with
+            task intent, expiring path claims, verified context deltas, and a
+            receipt before the next consequential move.
           </p>
           <div className="hero-actions">
             <a className="button" href="#demo">
-              <Play size={17} fill="currentColor" /> Run the product demo
+              <Play size={17} fill="currentColor" /> Run the two-agent proof
             </a>
             <a
               className="text-link"
@@ -87,8 +98,8 @@ function Landing() {
             </a>
           </div>
           <p className="privacy-note">
-            <ShieldCheck size={16} /> Local-first. No transcript hoarding. No
-            model API required.
+            <ShieldCheck size={16} /> Local SQLite. No transcript capture. No
+            model API or cloud account required.
           </p>
         </div>
         <NudgeSpecimen />
@@ -97,36 +108,38 @@ function Landing() {
       <section className="proof-strip" id="proof">
         <div className="shell proof-items">
           <div>
-            <strong>140</strong>
-            <span>explainable relevance score</span>
+            <strong>3</strong>
+            <span>provider-neutral agent identities</span>
           </div>
           <div>
-            <strong>8 min</strong>
-            <span>source age, shown honestly</span>
+            <strong>1</strong>
+            <span>durable project-scoped ledger</span>
           </div>
           <div>
             <strong>0</strong>
-            <span>cloud services required</span>
+            <span>raw prompts or file bodies stored</span>
           </div>
           <div>
             <strong>4</strong>
-            <span>proof scenarios included</span>
+            <span>steps: declare · preflight · act · receipt</span>
           </div>
         </div>
       </section>
 
       <section className="narrative shell" id="how">
         <div className="narrative-heading">
-          <span>Agents already communicate.</span>
-          <h2>The missing layer decides what matters.</h2>
+          <span>Memory is not the guarantee.</span>
+          <h2>
+            The missing layer proves what reached the agent before it acted.
+          </h2>
         </div>
         <div className="flow-line" aria-label="Agent Nudge data flow">
           {[
-            "Hooks + Git",
-            "Fact ledger",
-            "Relevance + policy",
-            "Last responsible moment",
-            "Outcome evidence",
+            "Declare intent",
+            "Route the delta",
+            "Preflight action",
+            "Act or replan",
+            "Record receipt",
           ].map((item, index) => (
             <div key={item}>
               <b>{index + 1}</b>
@@ -163,14 +176,48 @@ function Landing() {
         </div>
       </section>
 
+      <section className="bridge-contract shell" id="bridge">
+        <div className="bridge-heading">
+          <p className="section-signal">LIVE CONNECT CONTRACT</p>
+          <h2>Shared execution state, not a shared transcript.</h2>
+          <p>
+            Every provider uses the same local loop. Capabilities stay honest:
+            MCP and localhost sync are portable now; provider-specific hard
+            blocking remains an explicit connector capability.
+          </p>
+        </div>
+        <div className="bridge-grid">
+          <article>
+            <Bot />
+            <span>01 · CHECK IN</span>
+            <h3>Who is doing what?</h3>
+            <p>Provider, project, task, paths, heartbeat, and lease expiry.</p>
+          </article>
+          <article>
+            <AlertOctagon />
+            <span>02 · PREFLIGHT</span>
+            <h3>Can this agent safely act?</h3>
+            <p>
+              Only relevant decisions, failures, claims, and evidence arrive.
+            </p>
+          </article>
+          <article>
+            <ShieldCheck />
+            <span>03 · RECEIPT</span>
+            <h3>What changed because of it?</h3>
+            <p>Acknowledge, release, replan, or report the context as wrong.</p>
+          </article>
+        </div>
+      </section>
+
       <section className="commercial" id="pricing">
         <div className="shell commercial-inner">
           <div>
             <p className="section-signal">USEFUL BEFORE YOU PAY</p>
             <h2>The local product stays free.</h2>
             <p>
-              Pay later for encrypted teamwork, policy, audit, and controlled
-              delivery across agent fleets—not for storing more noise.
+              Pay for encrypted teamwork, multi-project operations, policy,
+              audit, and controlled delivery—not for storing more noise.
             </p>
           </div>
           <div className="price-line">
@@ -191,12 +238,32 @@ function Landing() {
               Become a design partner <ArrowRight size={15} />
             </a>
           </div>
+          <div className="price-line studio">
+            <span>Studio hypothesis</span>
+            <strong>
+              £79<em>/mo</em>
+            </strong>
+            <small>5 people · 50 projects · GitHub + Obsidian</small>
+            <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20studio%20pilot">
+              Join a studio pilot <ArrowRight size={15} />
+            </a>
+          </div>
+          <div className="price-line">
+            <span>Team hypothesis</span>
+            <strong>
+              £299<em>/mo</em>
+            </strong>
+            <small>10 people · policy · approvals · audit</small>
+            <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20team%20pilot">
+              Discuss a team pilot <ArrowRight size={15} />
+            </a>
+          </div>
         </div>
       </section>
 
       <footer className="shell footer">
         <Brand />
-        <p>The right agent. The right evidence. Before it acts.</p>
+        <p>Declare. Preflight. Act. Receipt.</p>
         <a href="https://github.com/manazoid4/agent-nudge">
           GitHub <ExternalLink size={14} />
         </a>
@@ -252,6 +319,7 @@ function NudgeSpecimen() {
 function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
   const [view, setView] = useState<View>("overview");
   const [snapshot, setSnapshot] = useState<Snapshot>(sampleSnapshot);
+  const [portfolio, setPortfolio] = useState<Portfolio>(samplePortfolio);
   const [selectedId, setSelectedId] = useState(snapshot.nudges[0]?.id ?? "");
   const [connected, setConnected] = useState(!isPublicDemo);
   const [busy, setBusy] = useState(false);
@@ -262,12 +330,17 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
   const refresh = useCallback(async () => {
     if (isPublicDemo) return;
     try {
-      const response = await fetch(
-        `${endpoint}/snapshot?projectId=project-agent-nudge`,
-      );
+      const [response, portfolioResponse] = await Promise.all([
+        fetch(`${endpoint}/snapshot?projectId=project-agent-nudge`),
+        fetch(`${endpoint}/portfolio`),
+      ]);
       if (!response.ok) throw new Error("offline");
       const data = (await response.json()) as Snapshot;
-      setSnapshot(data.nudges.length ? data : sampleSnapshot);
+      setSnapshot(data);
+      if (portfolioResponse.ok) {
+        const portfolioData = (await portfolioResponse.json()) as Portfolio;
+        setPortfolio(portfolioData);
+      }
       setConnected(true);
     } catch {
       setConnected(false);
@@ -288,7 +361,59 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
       setView("inbox");
     } else {
       try {
-        await fetch(`${endpoint}/demo`, { method: "POST" });
+        const suffix = Date.now().toString(36);
+        const sessions = [
+          {
+            sessionId: `claude-proof-${suffix}`,
+            provider: "claude-code",
+            task: {
+              summary: "Refining the cache contract",
+              paths: ["src/lib/cache.ts"],
+              tags: ["cache"],
+            },
+          },
+          {
+            sessionId: `codex-proof-${suffix}`,
+            provider: "codex",
+            task: {
+              summary: "Implementing the cache adapter",
+              paths: ["src/lib/cache.ts"],
+              tags: ["cache"],
+            },
+          },
+        ];
+        for (const session of sessions) {
+          await fetch(`${endpoint}/v1/sessions/check-in`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              ...session,
+              projectId: "project-agent-nudge",
+              projectName: "Agent Nudge",
+              cwd: "C:\\Projects\\agent-nudge",
+            }),
+          });
+        }
+        await fetch(`${endpoint}/v1/claims`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectId: "project-agent-nudge",
+            sessionId: sessions[0]?.sessionId,
+            path: "src/lib/cache.ts",
+            leaseSeconds: 300,
+          }),
+        });
+        const synced = await fetch(`${endpoint}/v1/sync`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectId: "project-agent-nudge",
+            sessionId: sessions[1]?.sessionId,
+            cursor: 0,
+          }),
+        });
+        if (!synced.ok) throw new Error("live proof failed");
         await refresh();
         setView("inbox");
       } catch {
@@ -341,7 +466,8 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
         <nav>
           {(
             [
-              ["overview", Gauge, "Overview"],
+              ["overview", Gauge, "Live sync"],
+              ["portfolio", Layers3, "Context mesh"],
               ["inbox", Inbox, "Nudge inbox"],
               ["agents", Bot, "Live agents"],
               ["timeline", Activity, "Timeline"],
@@ -373,7 +499,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   : "Daemon offline"}
             </span>
           </div>
-          <small>{window.agentNudge?.version ?? "v0.1.0"}</small>
+          <small>{window.agentNudge?.version ?? "v0.3.0"}</small>
         </div>
       </aside>
       <div className="workspace">
@@ -395,13 +521,14 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
               disabled={busy}
             >
               <Play size={15} fill="currentColor" />
-              {busy ? "Running…" : "Run proof"}
+              {busy ? "Running…" : "Run two-agent proof"}
             </button>
           </div>
         </header>
         {view === "overview" && (
           <Overview snapshot={snapshot} runDemo={runDemo} />
         )}
+        {view === "portfolio" && <ContextMeshView portfolio={portfolio} />}
         {view === "inbox" && (
           <InboxView
             snapshot={snapshot}
@@ -421,6 +548,187 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
   );
 }
 
+function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
+  const [selectedId, setSelectedId] = useState(
+    portfolio.projects[0]?.projectId ?? "",
+  );
+  const selected =
+    portfolio.projects.find((project) => project.projectId === selectedId) ??
+    portfolio.projects[0];
+
+  useEffect(() => {
+    if (
+      portfolio.projects.length &&
+      !portfolio.projects.some((project) => project.projectId === selectedId)
+    ) {
+      setSelectedId(portfolio.projects[0]?.projectId ?? "");
+    }
+  }, [portfolio, selectedId]);
+
+  return (
+    <div className="page mesh-page">
+      <div className="page-heading">
+        <div>
+          <p>Cross-repository assurance</p>
+          <h1>Context mesh</h1>
+          <span>
+            One quiet control surface for freshness, holds, receipts, and agent
+            coverage across locally known projects.
+          </span>
+        </div>
+        <div className="mesh-confidence">
+          <ShieldCheck size={18} />
+          <div>
+            <strong>Evidence, not memory claims</strong>
+            <span>Every status is derived from local ledger receipts.</span>
+          </div>
+        </div>
+      </div>
+
+      <section className="metric-grid mesh-metrics">
+        <Metric
+          icon={Layers3}
+          value={String(portfolio.metrics.projects)}
+          label="known projects"
+          detail="project-scoped by default"
+        />
+        <Metric
+          icon={ShieldCheck}
+          value={String(portfolio.metrics.protectedProjects)}
+          label="protected"
+          detail="current context + receipts"
+        />
+        <Metric
+          icon={AlertOctagon}
+          value={String(portfolio.metrics.openHolds)}
+          label="open holds"
+          detail="stop before consequential action"
+        />
+        <Metric
+          icon={Check}
+          value={String(portfolio.metrics.acknowledged)}
+          label="verified acknowledgements"
+          detail="delivery is measured separately"
+        />
+      </section>
+
+      {portfolio.projects.length ? (
+        <div className="mesh-layout">
+          <section className="panel mesh-projects">
+            <div className="panel-head">
+              <div>
+                <h2>Project attention order</h2>
+                <p>Risk first, then weakest context health.</p>
+              </div>
+              <span>{portfolio.metrics.activeAgents} active agents</span>
+            </div>
+            <div className="mesh-list" role="list">
+              {portfolio.projects.map((project) => (
+                <button
+                  key={project.projectId}
+                  className={
+                    selected?.projectId === project.projectId ? "active" : ""
+                  }
+                  onClick={() => setSelectedId(project.projectId)}
+                >
+                  <StateMark state={project.state} />
+                  <div>
+                    <strong>{project.projectName}</strong>
+                    <span>
+                      {project.activeAgents} agent
+                      {project.activeAgents === 1 ? "" : "s"} ·{" "}
+                      {project.receiptCount} receipts
+                    </span>
+                  </div>
+                  <div className="mesh-score">
+                    <strong>{project.healthScore}</strong>
+                    <span>{project.state}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {selected && <ProjectAssurance project={selected} />}
+        </div>
+      ) : (
+        <section className="panel empty-mesh">
+          <Layers3 size={28} />
+          <h2>No projects in the local ledger yet</h2>
+          <p>
+            Register an agent session or run the proof. Agent Nudge will never
+            discover or upload repositories behind your back.
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ProjectAssurance({ project }: { project: PortfolioProject }) {
+  const packStatus = project.openHolds
+    ? "HOLD"
+    : project.queued
+      ? "REVIEW"
+      : "CLEAR";
+  return (
+    <section className="panel assurance-card">
+      <div className="assurance-title">
+        <div>
+          <span>PRE-ACTION CONTEXT PACK</span>
+          <h2>{project.projectName}</h2>
+        </div>
+        <b className={`pack-status ${packStatus.toLowerCase()}`}>
+          {packStatus}
+        </b>
+      </div>
+      <p className="assurance-summary">
+        {packStatus === "HOLD"
+          ? `${project.openHolds} blocking conflict must be reviewed before the next write or commit.`
+          : packStatus === "REVIEW"
+            ? `${project.queued} source-backed context items are waiting for the next boundary.`
+            : "No consequential context is waiting. The next action can proceed."}
+      </p>
+      <dl className="assurance-grid">
+        <div>
+          <dt>Confidence</dt>
+          <dd>{Math.round(project.confidence * 100)}%</dd>
+        </div>
+        <div>
+          <dt>Receipts</dt>
+          <dd>{project.receiptCount}</dd>
+        </div>
+        <div>
+          <dt>Stale facts</dt>
+          <dd>{project.staleFacts}</dd>
+        </div>
+        <div>
+          <dt>Acknowledged</dt>
+          <dd>{project.acknowledged}</dd>
+        </div>
+      </dl>
+      <div className="integrity-strip">
+        <GitMerge size={17} />
+        <div>
+          <strong>Hash-addressed pack</strong>
+          <span>
+            Same ledger state produces the same digest; changed evidence creates
+            a new pack.
+          </span>
+        </div>
+      </div>
+      <div className="mesh-freshness">
+        <Clock3 size={16} />
+        Latest activity {relative(project.latestActivityAt)}
+      </div>
+    </section>
+  );
+}
+
+function StateMark({ state }: { state: PortfolioProject["state"] }) {
+  return <span className={`state-mark ${state}`} aria-label={state} />;
+}
+
 function Overview({
   snapshot,
   runDemo,
@@ -432,16 +740,31 @@ function Overview({
     <div className="page">
       <div className="page-heading">
         <div>
-          <p>Operations overview</p>
-          <h1>Context assurance</h1>
+          <p>Live coordination</p>
+          <h1>Who is doing what—and can the next agent act?</h1>
           <span>
-            Quiet until a decision, failure, or conflict changes the next move.
+            Presence, current task intent, changed constraints, and receipts
+            from one local production path.
           </span>
         </div>
         <button className="button secondary" onClick={runDemo}>
-          <Sparkles size={16} /> Replay proof scenarios
+          <Sparkles size={16} /> Run live conflict proof
         </button>
       </div>
+      <section className="live-loop" aria-label="Live Agent Bridge loop">
+        {[
+          ["01", "DECLARE", "Task + paths"],
+          ["02", "PREFLIGHT", "HOLD / REVIEW / CLEAR"],
+          ["03", "ACT", "Proceed or replan"],
+          ["04", "RECEIPT", "Acknowledge + evidence"],
+        ].map(([step, label, detail]) => (
+          <div key={step}>
+            <b>{step}</b>
+            <strong>{label}</strong>
+            <span>{detail}</span>
+          </div>
+        ))}
+      </section>
       <div className="metric-band">
         <Metric
           icon={Bot}
@@ -453,7 +776,7 @@ function Overview({
           icon={BellRing}
           value={snapshot.metrics.queued}
           label="awaiting action"
-          detail="one pre-action hold"
+          detail="current project queue"
           tone="danger"
         />
         <Metric
@@ -464,9 +787,9 @@ function Overview({
         />
         <Metric
           icon={Clock3}
-          value="8m"
-          label="median context age"
-          detail="at delivery"
+          value={snapshot.metrics.acknowledged}
+          label="acknowledged"
+          detail="receipt-backed"
         />
       </div>
       <section className="overview-grid">
@@ -493,25 +816,25 @@ function Overview({
             <span className="status-ok">Healthy</span>
           </div>
           <div className="routing-meter">
-            <div style={{ width: "92%" }} />
-            <span>92% useful-or-opened</span>
+            <div style={{ width: snapshot.nudges.length ? "100%" : "0%" }} />
+            <span>Deterministic local routing</span>
           </div>
           <dl>
             <div>
-              <dt>Suppressed as noise</dt>
-              <dd>18</dd>
+              <dt>Structured facts</dt>
+              <dd>{snapshot.facts.length}</dd>
             </div>
             <div>
-              <dt>Expired before delivery</dt>
-              <dd>2</dd>
+              <dt>Ledger events</dt>
+              <dd>{snapshot.events.length}</dd>
             </div>
             <div>
-              <dt>Wrong-context reports</dt>
-              <dd>0</dd>
+              <dt>Delivered nudges</dt>
+              <dd>{snapshot.metrics.delivered}</dd>
             </div>
             <div>
-              <dt>Local evidence coverage</dt>
-              <dd>100%</dd>
+              <dt>Queued nudges</dt>
+              <dd>{snapshot.metrics.queued}</dd>
             </div>
           </dl>
           <div className="system-note">
@@ -649,10 +972,10 @@ function AgentsView({ snapshot }: { snapshot: Snapshot }) {
             </div>
             <div>
               <span>{agent.provider}</span>
-              <h2>{agent.activeTask.summary}</h2>
+              <h2>{agent.activeTask?.summary ?? "No task declared"}</h2>
               <p>
                 <FileCode2 size={14} />
-                {agent.activeTask.paths.join(", ")}
+                {agent.activeTask?.paths.join(", ") || "No paths declared"}
               </p>
             </div>
             <div className="agent-state">
@@ -770,7 +1093,7 @@ function SettingsView({
         <Setting
           icon={TerminalSquare}
           title="Agent integrations"
-          text="Claude Code and Codex adapters are project-scoped and preview changes before install."
+          text="Claude Code, Codex, and OpenCode adapters are project-scoped and will preview changes before install."
           action="Show install plan"
         />
         <Setting
@@ -861,7 +1184,8 @@ function Brand({ compact = false }: { compact?: boolean }) {
     </a>
   );
 }
-function relative(date: string) {
+function relative(date?: string) {
+  if (!date) return "not recorded";
   const minutes = Math.max(
     0,
     Math.round((Date.now() - new Date(date).getTime()) / 60000),

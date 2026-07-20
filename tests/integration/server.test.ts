@@ -41,4 +41,37 @@ describe("localhost API", () => {
     });
     expect(response.json()).toMatchObject({ state: "acknowledged" });
   });
+
+  it("exposes deterministic context packs and portfolio health", async () => {
+    const db = new NudgeDatabase(":memory:");
+    const app = createServer(db);
+    close.push(async () => {
+      await app.close();
+      db.close();
+    });
+    await app.inject({ method: "POST", url: "/demo/conflict" });
+
+    const first = (
+      await app.inject({
+        method: "GET",
+        url: "/context-pack?projectId=project-agent-nudge&recipientSessionId=codex-conflict",
+      })
+    ).json();
+    const second = (
+      await app.inject({
+        method: "GET",
+        url: "/context-pack?projectId=project-agent-nudge&recipientSessionId=codex-conflict",
+      })
+    ).json();
+    expect(first).toMatchObject({ status: "HOLD", counts: { blockers: 1 } });
+    expect(first.digestHash).toBe(second.digestHash);
+
+    const portfolio = (
+      await app.inject({ method: "GET", url: "/portfolio" })
+    ).json();
+    expect(portfolio.projects[0]).toMatchObject({
+      projectId: "project-agent-nudge",
+      state: "hold",
+    });
+  });
 });

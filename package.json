@@ -1,6 +1,6 @@
 {
   "name": "agent-nudge",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Pre-action context assurance for AI coding agents",
   "author": "manazoid4",
@@ -44,7 +44,7 @@
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",
-    "electron": "^38.1.2",
+    "electron": "^39.8.5",
     "electron-builder": "^26.0.12",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",
@@ -55,6 +55,9 @@
     "typescript-eslint": "^8.44.1",
     "vite": "^7.1.7",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   },
   "build": {
     "appId": "io.agentnudge.desktop",
