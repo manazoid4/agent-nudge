@@ -29,6 +29,8 @@ POST /v1/sync
 POST /v1/claims
 POST /v1/claims/:id/release
 POST /v1/nudges/:id/acknowledge
+POST /v1/hooks/preflight
+POST /v1/hooks/receipt
 ```
 
 `POST /v1/sync` returns:
@@ -66,7 +68,7 @@ Explicit facts receive a content-derived identifier. Re-publishing the same sema
 
 ## Honest capability boundary
 
-V0.3 ships the local protocol, CLI, HTTP, MCP, desktop proof, and persistence. It does not silently install hooks. Future connectors must label enforcement honestly:
+V0.4 adds explicit, reversible provider connection. Every connect is a dry-run unless `--apply` is present. See [Live Connect](LIVE-CONNECT.md).
 
 - `ENFORCED` — host supports a pre-action stop;
 - `ADVISORY` — agent receives a boundary check but can continue;

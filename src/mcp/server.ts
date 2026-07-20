@@ -1,14 +1,10 @@
 #!/usr/bin/env node
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { resolveDatabasePath } from "../core/paths.js";
 import { NudgeDatabase } from "../storage/database.js";
 import { createMcpServer } from "./tools.js";
 
-const database = new NudgeDatabase(
-  process.env.AGENT_NUDGE_DB ??
-    join(homedir(), ".agent-nudge", "agent-nudge.db"),
-);
+const database = new NudgeDatabase(resolveDatabasePath());
 const server = createMcpServer(database);
 
 async function start() {

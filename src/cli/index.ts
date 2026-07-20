@@ -1,9 +1,16 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import {
+  CONNECTOR_PROVIDERS,
+  ConnectorManager,
+  type ConnectorArtifacts,
+  type ConnectorProvider,
+} from "../connectors/index.js";
 import { buildAllScenarios } from "../core/demo.js";
-import { NudgeDatabase } from "../storage/database.js";
+import { resolveAgentNudgeHome } from "../core/paths.js";
 
 const command = process.argv[2] ?? "help";
 const endpoint = process.env.AGENT_NUDGE_URL ?? "http://127.0.0.1:47831";
@@ -13,7 +20,9 @@ async function main() {
     return help();
   if (command === "doctor") return doctor();
   if (command === "demo") return demo();
-  if (command === "install") return installPreview();
+  if (command === "connect" || command === "install") return connect();
+  if (command === "disconnect") return disconnect();
+  if (command === "status") return connectorStatus();
   if (command === "check-in") return checkIn();
   if (command === "sync") return sync();
   if (command === "claim") return claim();
@@ -35,7 +44,12 @@ function help() {
 Commands:
   doctor                    Check runtime and local daemon
   demo                      Run all four proof scenarios
-  install [all] --dry-run   Preview safe Claude/Codex project integration
+  connect [all|provider] [--project PATH] [--apply]
+                            Plan or apply reversible project hooks (dry-run default)
+  disconnect [all|provider] [--project PATH] [--apply]
+                            Plan or remove only Agent Nudge-owned integration
+  status [--project PATH]   Inspect connection health, drift, and queued events
+  install ...               Backward-compatible alias for connect
   check-in <session> <provider> <project> <task> [paths]
                             Join or heartbeat a live project session
   sync <project> <session> [cursor]
@@ -242,6 +256,15 @@ async function doctor() {
   } catch {
     daemon = false;
   }
+  let connectors: unknown = { status: "not-a-git-project" };
+  try {
+    connectors = await connectorManager(process.cwd()).inspect(process.cwd());
+  } catch (error) {
+    connectors = {
+      status: "unavailable",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
   const result = {
     ok: true,
     node: process.version,
@@ -249,6 +272,7 @@ async function doctor() {
     daemon,
     endpoint,
     dataDirWritable: ensureDataDir(),
+    connectors,
   };
   console.log(JSON.stringify(result, null, 2));
 }
@@ -268,6 +292,7 @@ async function demo() {
     // Offline demo intentionally falls through to an isolated local database.
   }
   const path = join(tmpdir(), `agent-nudge-demo-${process.pid}.db`);
+  const { NudgeDatabase } = await import("../storage/database.js");
   const db = new NudgeDatabase(path);
   const results = buildAllScenarios();
   results.forEach((result) => db.seedScenario(result));
@@ -285,38 +310,164 @@ async function demo() {
   db.close();
 }
 
-function installPreview() {
-  const dryRun =
-    process.argv.includes("--dry-run") || !process.argv.includes("--apply");
-  const cwd = process.cwd();
-  const plan = {
-    dryRun,
-    scope: "project",
-    target: cwd,
-    changes: [
-      {
-        provider: "claude-code",
-        file: join(cwd, ".claude", "settings.json"),
-        action: "merge owned Agent Nudge hook block",
-        backup: true,
-      },
-      {
-        provider: "codex",
-        file: join(cwd, ".codex", "config.toml"),
-        action: "append owned Agent Nudge notification block",
-        backup: true,
-      },
-    ],
-    safety:
-      "No files changed. Re-run with --apply only after reviewing the generated provider-specific plan.",
+async function connect() {
+  const options = parseConnectorArgs(process.argv.slice(3));
+  const manager = connectorManager(options.projectPath);
+  const request = {
+    projectPath: options.projectPath,
+    providers: options.providers,
   };
-  console.log(JSON.stringify(plan, null, 2));
-  if (!dryRun) {
-    console.error(
-      "Apply mode is intentionally disabled in MVP. Use the documented manual project-scoped integration.",
-    );
-    process.exitCode = 2;
+  const result = options.apply
+    ? await manager.connect(request)
+    : await manager.planConnect(request);
+  console.log(JSON.stringify(result, null, 2));
+}
+
+async function disconnect() {
+  const options = parseConnectorArgs(process.argv.slice(3));
+  const manager = connectorManager(options.projectPath);
+  const request = {
+    projectPath: options.projectPath,
+    providers: options.providers,
+  };
+  const result = options.apply
+    ? await manager.disconnect(request)
+    : await manager.planDisconnect(request);
+  console.log(JSON.stringify(result, null, 2));
+}
+
+async function connectorStatus() {
+  const args = process.argv.slice(3);
+  let projectPath = process.cwd();
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    const next = args[index + 1];
+    if (value === "--project" && next) {
+      projectPath = resolve(next);
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown status argument: ${value}`);
   }
+  console.log(
+    JSON.stringify(
+      await connectorManager(projectPath).inspect(projectPath),
+      null,
+      2,
+    ),
+  );
+}
+
+function parseConnectorArgs(args: string[]) {
+  let projectPath = process.cwd();
+  let apply = false;
+  let providerToken = "all";
+  let providerSeen = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    if (!value) continue;
+    if (value === "--apply") {
+      apply = true;
+      continue;
+    }
+    if (value === "--dry-run") continue;
+    const next = args[index + 1];
+    if (value === "--project" && next) {
+      projectPath = resolve(next);
+      index += 1;
+      continue;
+    }
+    if (!value.startsWith("--") && !providerSeen) {
+      providerToken = value;
+      providerSeen = true;
+      continue;
+    }
+    throw new Error(`Unknown connector argument: ${value}`);
+  }
+  const providers: readonly ConnectorProvider[] =
+    providerToken === "all"
+      ? CONNECTOR_PROVIDERS
+      : CONNECTOR_PROVIDERS.includes(providerToken as ConnectorProvider)
+        ? [providerToken as ConnectorProvider]
+        : (() => {
+            throw new Error(`Unsupported provider: ${providerToken}`);
+          })();
+  return { apply, projectPath, providers };
+}
+
+function connectorManager(projectPath: string) {
+  const hookPath = resolve(
+    dirname(process.argv[1] ?? process.cwd()),
+    "hook.cjs",
+  );
+  const projectRoot = resolve(projectPath);
+  const projectId = `project-${createHash("sha256")
+    .update(
+      process.platform === "win32" ? projectRoot.toLowerCase() : projectRoot,
+    )
+    .digest("hex")
+    .slice(0, 16)}`;
+  const projectName = basename(projectRoot);
+  const args = (provider: ConnectorProvider, phase = "auto") => [
+    hookPath,
+    provider,
+    phase,
+    "--project-id",
+    projectId,
+    "--project-name",
+    projectName,
+    "--project-root",
+    projectRoot,
+  ];
+  const command = (provider: ConnectorProvider) =>
+    ["node", ...args(provider)].map(shellQuote).join(" ");
+  const artifacts: ConnectorArtifacts = {
+    "claude-code": { command: command("claude-code") },
+    codex: { command: command("codex") },
+    opencode: {
+      pluginContent: openCodePlugin(args("opencode")),
+    },
+  };
+  return new ConnectorManager({ stateDir: resolveAgentNudgeHome(), artifacts });
+}
+
+function shellQuote(value: string) {
+  return `"${value.replaceAll('"', '\\"')}"`;
+}
+
+function openCodePlugin(hookArgs: string[]) {
+  return `// Owned by Agent Nudge. Remove with: agent-nudge disconnect opencode --apply
+import { execFileSync } from "node:child_process";
+
+const hookArgs = ${JSON.stringify(hookArgs)};
+
+function run(phase, input, output) {
+  try {
+    const stdout = execFileSync("node", [hookArgs[0], hookArgs[1], phase, ...hookArgs.slice(3)], {
+      input: JSON.stringify({ ...input, tool_input: output?.args }),
+      encoding: "utf8",
+      timeout: 1500,
+      windowsHide: true,
+    });
+    return stdout ? JSON.parse(stdout) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const AgentNudge = async () => ({
+  "tool.execute.before": async (input, output) => {
+    const result = run("pre", input, output);
+    const decision = result?.hookSpecificOutput;
+    if (decision?.permissionDecision === "deny") {
+      throw new Error(decision.permissionDecisionReason || "Agent Nudge found blocking project context.");
+    }
+  },
+  "tool.execute.after": async (input, output) => {
+    run("post", input, output);
+  },
+});
+`;
 }
 
 async function exportData() {

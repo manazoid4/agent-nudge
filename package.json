@@ -1,6 +1,6 @@
 {
   "name": "agent-nudge",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Pre-action context assurance for AI coding agents",
   "author": "manazoid4",
@@ -9,6 +9,7 @@
   "main": "dist-node/main.cjs",
   "bin": {
     "agent-nudge": "dist-node/cli.cjs",
+    "agent-nudge-hook": "dist-node/hook.cjs",
     "agent-nudge-mcp": "dist-node/mcp.cjs"
   },
   "scripts": {

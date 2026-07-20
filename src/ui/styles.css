@@ -526,6 +526,19 @@ h3 {
   font-size: 13px;
   line-height: 1.6;
 }
+.connector-grid {
+  margin-top: 16px;
+}
+.connector-grid article {
+  min-height: 220px;
+}
+.capability-note {
+  max-width: 760px;
+  margin: 16px 0 0;
+  color: oklch(0.38 0.02 150);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .commercial {
   background: var(--bg);
   color: var(--ink);
@@ -1301,6 +1314,10 @@ h3 {
   background: transparent;
   color: var(--mint);
   font-size: 9px;
+}
+.settings-stack article button:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 .mesh-page {
   max-width: 1440px;

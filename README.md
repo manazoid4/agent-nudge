@@ -4,11 +4,11 @@
 
 ![Agent Nudge status](https://img.shields.io/badge/status-Windows_MVP-79d99a) ![Privacy](https://img.shields.io/badge/privacy-local--first-173d2a) ![License](https://img.shields.io/badge/license-MIT-black)
 
-[Open the live interactive demo](https://agent-nudge-manazir-s-projects1.vercel.app/#demo)
+[Open the live interactive demo](https://agent-nudge-bay.vercel.app/#demo)
 
 ## Live product proof
 
-V0.3 closes the real coordination loop without calling a model API:
+V0.4 closes the real coordination loop without calling a model API:
 
 ```text
 agent check-in + task intent
@@ -28,7 +28,7 @@ The live proof uses session check-in, claim, sync, and acknowledgement APIs from
 
 Every delivered nudge shows its score factors, evidence reference, freshness, recipient, state, and reason for arriving now.
 
-The v0.2 Context Mesh remains the cross-project read model. V0.3 adds the [Live Sync contract](docs/LIVE-SYNC.md). See the [complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
+The v0.2 Context Mesh remains the cross-project read model. V0.3 added the [Live Sync contract](docs/LIVE-SYNC.md); v0.4 adds [reversible Live Connect](docs/LIVE-CONNECT.md). See the [complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
 
 ## Run locally
 
@@ -49,7 +49,7 @@ npm run dev:daemon
 npm run dev
 ```
 
-The daemon binds only to `127.0.0.1:47831`. The SQLite ledger defaults to `%USERPROFILE%\.agent-nudge\agent-nudge.db`; the packaged desktop uses its Electron user-data directory.
+The daemon binds only to `127.0.0.1:47831`. The CLI, MCP server, hook bridge, and packaged desktop share `%USERPROFILE%\.agent-nudge` by default. Override it with `AGENT_NUDGE_HOME` for isolated tests.
 
 ## Two-minute demo
 
@@ -67,7 +67,11 @@ The desktop **Run two-agent proof** action checks in live Claude/Codex sessions,
 ```text
 agent-nudge doctor
 agent-nudge demo
-agent-nudge install all --scope project --dry-run
+agent-nudge connect all --project C:\path\to\repo
+agent-nudge connect all --project C:\path\to\repo --apply
+agent-nudge status --project C:\path\to\repo
+agent-nudge disconnect all --project C:\path\to\repo
+agent-nudge disconnect all --project C:\path\to\repo --apply
 agent-nudge check-in claude-1 claude-code project-id "Refactor cache" src/cache.ts
 agent-nudge check-in codex-1 codex project-id "Update cache adapter" src/cache.ts
 agent-nudge claim project-id claude-1 src/cache.ts 300
@@ -81,7 +85,9 @@ agent-nudge export [output.json]
 agent-nudge purge --preview
 ```
 
-The installer is still preview-only in v0.3.0. It shows exact project-scoped Claude/Codex changes and never touches real configuration during tests. The next slice is reversible `connect`/`disconnect` with owned markers and capability labels.
+`connect` and `disconnect` are dry-run by default. `--apply` is explicit. Agent Nudge merges only an owned Claude/Codex hook entry, owns the OpenCode plugin file, records manifests and byte-exact backups outside the repository, refuses drift, and leaves unrelated provider settings intact. Repeating connect or disconnect is a no-op.
+
+Capability labels are deliberately conditional. Claude Code, trusted Codex project hooks, and OpenCode project plugins can block covered pre-tool actions while enabled. Hosted, disabled, bypassed, untrusted, and otherwise uncovered actions remain outside that boundary.
 
 ## Architecture
 
@@ -94,7 +100,7 @@ Claude / Codex / OpenCode task intent
                  ↓
    deterministic recipient fan-out
                  ↓
-    preflight pack + acknowledgement receipt
+    preflight hook + acknowledgement receipt
 ```
 
 The public Vercel site contains marketing and an interactive fixture demo only. The local daemon, SQLite database, and project context are not deployed.
@@ -106,6 +112,7 @@ The public Vercel site contains marketing and an interactive fixture demo only. 
 - Credential-shaped text is redacted before persistence.
 - Project ID scopes every ledger query.
 - Electron runs with context isolation, sandboxing, and no renderer Node integration.
+- Raw provider payloads are discarded; only allowlisted event metadata can enter the outbox or ledger.
 - Delivery is never labelled as proof that a model “knows” something.
 
 See [docs/SECURITY.md](docs/SECURITY.md), [docs/PROTOCOL.md](docs/PROTOCOL.md), and [docs/WINDOWS-INSTALL.md](docs/WINDOWS-INSTALL.md).
@@ -131,7 +138,7 @@ npm run doctor
 
 ## Known MVP boundaries
 
-The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, safe install previews, UI, and packaging. It does not automatically modify provider configuration, infer hidden model state, synchronize between devices, or enforce hard execution blocks. Provider-specific hooks and a disk-backed offline outbox are the next activation slice.
+The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, and Windows packaging. It does not infer hidden model state, guarantee coverage of every provider action, recover a connector transaction after a hard process termination, synchronize between devices, or replace provider trust and hook controls.
 
 ## License
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, nativeImage, Tray, Menu, shell } from "electron";
 import { join } from "node:path";
 import { createServer } from "../src/daemon/server.js";
+import { resolveDatabasePath } from "../src/core/paths.js";
 import { NudgeDatabase } from "../src/storage/database.js";
 
 let window: BrowserWindow | null = null;
@@ -21,12 +22,29 @@ app.on("second-instance", () => {
 });
 
 app.whenReady().then(async () => {
-  database = new NudgeDatabase(join(app.getPath("userData"), "agent-nudge.db"));
+  database = new NudgeDatabase(resolveDatabasePath());
   server = createServer(database);
   try {
     await server.listen({ host: "127.0.0.1", port: 47831 });
   } catch (error) {
     if (!String(error).includes("EADDRINUSE")) throw error;
+    const response = await fetch("http://127.0.0.1:47831/health", {
+      signal: AbortSignal.timeout(750),
+    });
+    const health = (await response.json()) as {
+      ok?: boolean;
+      service?: string;
+      version?: string;
+      localOnly?: boolean;
+    };
+    if (
+      !response.ok ||
+      !health.ok ||
+      health.service !== "agent-nudge" ||
+      health.version !== "0.4.0" ||
+      health.localOnly !== true
+    )
+      throw new Error("port_47831_is_not_compatible_agent_nudge");
   }
   createWindow();
   createTray();

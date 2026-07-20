@@ -434,6 +434,25 @@ export class NudgeDatabase {
     return released;
   }
 
+  releaseSessionClaims(
+    projectId: string,
+    sessionId: string,
+    paths: string[],
+    now = new Date(),
+  ) {
+    this.requireSession(projectId, sessionId);
+    const keys = new Set(paths.map(normalizeClaimPath));
+    const claims = this.list<PathClaim>("claims", projectId).filter(
+      (claim) =>
+        claim.sessionId === sessionId &&
+        claim.state === "active" &&
+        (keys.size === 0 || keys.has(claim.pathKey)),
+    );
+    return claims.map((claim) =>
+      this.releaseClaim({ projectId, sessionId, claimId: claim.id }, now),
+    );
+  }
+
   acknowledge(input: AcknowledgeRequest, now = new Date()) {
     this.requireSession(input.projectId, input.sessionId);
     const nudge = this.get<Nudge>("nudges", input.nudgeId);

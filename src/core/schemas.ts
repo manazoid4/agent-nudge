@@ -278,6 +278,21 @@ export const syncRequestSchema = z.object({
   cursor: z.number().int().nonnegative().default(0),
 });
 
+export const hookPreflightSchema = z.object({
+  provider: providerSchema,
+  sessionId: z.string().min(1).max(160),
+  projectId: z.string().min(1).max(160),
+  projectName: z.string().min(1).max(160),
+  cwd: z.string().min(1).max(1024),
+  toolClass: z.string().min(1).max(120),
+  paths: z.array(z.string().min(1).max(1024)).max(100).default([]),
+  leaseSeconds: z.number().int().min(30).max(3600).default(120),
+});
+
+export const hookReceiptSchema = hookPreflightSchema.omit({
+  leaseSeconds: true,
+});
+
 export const pathClaimSchema = z.object({
   id: z.string().min(1),
   schemaVersion: z.literal(1),
@@ -341,6 +356,8 @@ export type ClaimRequest = z.infer<typeof claimRequestSchema>;
 export type ReleaseClaimRequest = z.infer<typeof releaseClaimRequestSchema>;
 export type AcknowledgeRequest = z.infer<typeof acknowledgeRequestSchema>;
 export type SyncRequest = z.infer<typeof syncRequestSchema>;
+export type HookPreflightInput = z.infer<typeof hookPreflightSchema>;
+export type HookReceiptInput = z.infer<typeof hookReceiptSchema>;
 export type PathClaim = z.infer<typeof pathClaimSchema>;
 export type ChangeLogEntry = z.infer<typeof changeLogEntrySchema>;
 export type PeerPresence = z.infer<typeof peerPresenceSchema>;
