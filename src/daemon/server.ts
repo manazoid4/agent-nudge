@@ -13,6 +13,8 @@ import {
   claimRequestSchema,
   eventSchema,
   factSchema,
+  hookPreflightSchema,
+  hookReceiptSchema,
   publishFactInputSchema,
   releaseClaimRequestSchema,
   sessionSchema,
@@ -30,7 +32,7 @@ export function createServer(database: NudgeDatabase) {
   app.get("/health", async () => ({
     ok: true,
     service: "agent-nudge",
-    version: "0.3.0",
+    version: "0.4.0",
     localOnly: true,
     at: new Date().toISOString(),
   }));
@@ -156,6 +158,107 @@ export function createServer(database: NudgeDatabase) {
       });
     try {
       return database.acknowledge({ ...parsed.data, nudgeId: params.id });
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/hooks/preflight", async (request, reply) => {
+    const parsed = hookPreflightSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({
+        error: "invalid_hook_preflight",
+        details: parsed.error.flatten(),
+      });
+    try {
+      const input = parsed.data;
+      database.checkIn({
+        sessionId: input.sessionId,
+        provider: input.provider,
+        projectId: input.projectId,
+        projectName: input.projectName,
+        cwd: input.cwd,
+        task: {
+          summary: `Preflight ${input.toolClass}`,
+          paths: input.paths,
+          tags: ["provider-hook"],
+        },
+      });
+      const acquired = [];
+      const conflicts = [];
+      for (const path of input.paths) {
+        const result = database.acquireClaim({
+          projectId: input.projectId,
+          sessionId: input.sessionId,
+          path,
+          leaseSeconds: input.leaseSeconds,
+        });
+        if (result.acquired) acquired.push(result.claim);
+        else conflicts.push(result.conflict);
+      }
+      const sync = database.sync({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        cursor: 0,
+      });
+      const status = conflicts.length > 0 ? "HOLD" : sync.status;
+      if (status === "HOLD" && acquired.length > 0)
+        database.releaseSessionClaims(
+          input.projectId,
+          input.sessionId,
+          acquired.map((claim) => claim.path),
+        );
+      return {
+        schemaVersion: 1,
+        status,
+        reason:
+          status === "HOLD"
+            ? "Agent Nudge found an active conflicting claim or blocking constraint."
+            : status === "REVIEW"
+              ? "Relevant context is available; review it before continuing."
+              : "No blocking context is active for this action.",
+        claims: acquired.map((claim) => ({
+          id: claim.id,
+          path: claim.path,
+          leaseExpiresAt: claim.leaseExpiresAt,
+        })),
+        conflicts: conflicts.map((claim) => ({
+          id: claim.id,
+          path: claim.path,
+          leaseExpiresAt: claim.leaseExpiresAt,
+        })),
+        nudgeIds: sync.nudges.map((nudge) => nudge.id),
+        digest: sync.digest,
+      };
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/hooks/receipt", async (request, reply) => {
+    const parsed = hookReceiptSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({
+        error: "invalid_hook_receipt",
+        details: parsed.error.flatten(),
+      });
+    try {
+      const input = parsed.data;
+      database.heartbeat(input.projectId, input.sessionId, {
+        summary: `Completed ${input.toolClass}`,
+        paths: input.paths,
+        tags: ["provider-hook", "receipt"],
+      });
+      const released = database.releaseSessionClaims(
+        input.projectId,
+        input.sessionId,
+        input.paths,
+      );
+      return {
+        schemaVersion: 1,
+        status: "recorded",
+        releasedClaimIds: released.map((claim) => claim.id),
+      };
     } catch (error) {
       return sendLiveSyncError(reply, error);
     }

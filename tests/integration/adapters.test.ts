@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   deliverBestEffort,
   normalizeHook,
@@ -39,7 +42,14 @@ describe("provider adapters", () => {
       thread_id: "offline",
       cwd: "C:\\repo",
     });
-    const result = await deliverBestEffort(event, "http://127.0.0.1:9/events");
-    expect(result).toEqual({ delivered: false, status: 0 });
+    const result = await deliverBestEffort(event, "http://127.0.0.1:9/events", {
+      stateDir: mkdtempSync(join(tmpdir(), "agent-nudge-adapter-")),
+    });
+    expect(result).toMatchObject({
+      delivered: false,
+      queued: true,
+      status: 0,
+      pending: 1,
+    });
   });
 });

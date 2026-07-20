@@ -78,7 +78,7 @@ function Landing() {
           <div className="signal-line">
             <span />
             <strong>Live Agent Bridge</strong>
-            <span>v0.3 · local first</span>
+            <span>v0.4 · reversible connect</span>
           </div>
           <h1>Two agents. One repository. No stale decisions.</h1>
           <p className="hero-lede">
@@ -208,6 +208,43 @@ function Landing() {
             <p>Acknowledge, release, replan, or report the context as wrong.</p>
           </article>
         </div>
+        <div
+          className="bridge-grid connector-grid"
+          aria-label="Connector capabilities"
+        >
+          <article>
+            <Bot />
+            <span>CLAUDE CODE · ENFORCED*</span>
+            <h3>Project hook</h3>
+            <p>
+              Pre-action blocking for covered tools while project hooks are
+              enabled.
+            </p>
+          </article>
+          <article>
+            <TerminalSquare />
+            <span>CODEX · ENFORCED*</span>
+            <h3>Trusted project hook</h3>
+            <p>
+              Pre-action blocking for covered local tools after the hook is
+              reviewed and trusted.
+            </p>
+          </article>
+          <article>
+            <Layers3 />
+            <span>OPENCODE · ENFORCED*</span>
+            <h3>Project plugin</h3>
+            <p>
+              Pre-action blocking for covered tool executions while the plugin
+              is enabled.
+            </p>
+          </article>
+        </div>
+        <p className="capability-note">
+          * Hooks are guardrails, not a complete security boundary. Hosted,
+          disabled, bypassed, or otherwise uncovered actions remain outside
+          enforcement.
+        </p>
       </section>
 
       <section className="commercial" id="pricing">
@@ -499,7 +536,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   : "Daemon offline"}
             </span>
           </div>
-          <small>{window.agentNudge?.version ?? "v0.3.0"}</small>
+          <small>{window.agentNudge?.version ?? "v0.4.0"}</small>
         </div>
       </aside>
       <div className="workspace">
@@ -1070,6 +1107,7 @@ function SettingsView({
   connected: boolean;
   isPublicDemo: boolean;
 }) {
+  const [connectCommandCopied, setConnectCommandCopied] = useState(false);
   return (
     <div className="page">
       <div className="page-heading">
@@ -1093,8 +1131,13 @@ function SettingsView({
         <Setting
           icon={TerminalSquare}
           title="Agent integrations"
-          text="Claude Code, Codex, and OpenCode adapters are project-scoped and will preview changes before install."
-          action="Show install plan"
+          text="Claude Code, Codex, and OpenCode use project-scoped, reversible connectors. Dry-run is the default; --apply is always explicit."
+          action={connectCommandCopied ? "Copied" : "Copy connect command"}
+          onClick={() => {
+            void copyText("agent-nudge connect all --dry-run").then(() =>
+              setConnectCommandCopied(true),
+            );
+          }}
         />
         <Setting
           icon={ShieldCheck}
@@ -1111,6 +1154,26 @@ function SettingsView({
       </div>
     </div>
   );
+}
+
+async function copyText(value: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+  } catch {
+    // Fall back to the synchronous copy path below.
+  }
+  const input = document.createElement("textarea");
+  input.value = value;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand("copy");
+  input.remove();
 }
 
 function Metric({ icon: Icon, value, label, detail, tone = "" }: any) {
@@ -1152,7 +1215,7 @@ function ClassIcon({ value }: { value: string }) {
     </span>
   );
 }
-function Setting({ icon: Icon, title, text, action }: any) {
+function Setting({ icon: Icon, title, text, action, onClick }: any) {
   return (
     <article>
       <Icon />
@@ -1160,7 +1223,7 @@ function Setting({ icon: Icon, title, text, action }: any) {
         <h2>{title}</h2>
         <p>{text}</p>
       </div>
-      <button>
+      <button onClick={onClick} disabled={!onClick}>
         {action}
         <ChevronRight size={15} />
       </button>

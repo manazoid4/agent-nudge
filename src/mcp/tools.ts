@@ -5,7 +5,7 @@ import type { AgentSession } from "../core/schemas.js";
 import type { NudgeDatabase } from "../storage/database.js";
 
 export function createMcpServer(database: NudgeDatabase) {
-  const server = new McpServer({ name: "agent-nudge", version: "0.3.0" });
+  const server = new McpServer({ name: "agent-nudge", version: "0.4.0" });
 
   server.tool(
     "agent_nudge_status",

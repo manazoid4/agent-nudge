@@ -1,12 +1,9 @@
 #!/usr/bin/env node
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { resolveDatabasePath } from "../core/paths.js";
 import { createServer, DEFAULT_PORT } from "./server.js";
 import { NudgeDatabase } from "../storage/database.js";
 
-const dbPath =
-  process.env.AGENT_NUDGE_DB ??
-  join(homedir(), ".agent-nudge", "agent-nudge.db");
+const dbPath = resolveDatabasePath();
 const port = Number(process.env.AGENT_NUDGE_PORT ?? DEFAULT_PORT);
 async function start() {
   const database = new NudgeDatabase(dbPath);

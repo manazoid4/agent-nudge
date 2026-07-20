@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import type { AgentEvent, AgentProvider } from "../core/schemas.js";
-import { redactText, sanitizeObject } from "../core/redaction.js";
+import { EventOutbox, type EventOutboxOptions } from "./outbox.js";
 
 export type HookPayload = {
   session_id?: string;
@@ -19,44 +19,91 @@ export type HookPayload = {
 export function normalizeHook(
   provider: AgentProvider,
   payload: HookPayload,
+  overrides: { projectId?: string; receivedAt?: string } = {},
 ): AgentEvent {
-  const now = new Date().toISOString();
+  const now = overrides.receivedAt ?? new Date().toISOString();
   const sessionId =
-    payload.session_id ?? payload.thread_id ?? `${provider}-unknown`;
+    payload.session_id ??
+    payload.thread_id ??
+    stringField(payload, "sessionID") ??
+    stringField(payload, "sessionId") ??
+    `${provider}-unknown`;
   const eventName = String(
     payload.hook_event_name ?? payload.event ?? "tool.after",
   ).toLowerCase();
   const eventType = mapEvent(eventName);
-  const rawPaths = [
-    payload.file_path,
-    payload.tool_input?.file_path,
-    payload.tool_input?.path,
-  ]
-    .filter((item): item is string => typeof item === "string")
-    .map((path) => path.replaceAll("\\", "/"));
-  const redactionProbe = redactText(JSON.stringify(payload));
-  const clean = sanitizeObject(payload) as Record<string, unknown>;
+  const rawPaths = extractPaths(payload);
   const occurredAt = validDate(payload.timestamp)
     ? new Date(payload.timestamp as string).toISOString()
     : now;
-  const identity = `${provider}:${sessionId}:${eventType}:${occurredAt}:${rawPaths.join(",")}`;
+  const toolClass =
+    typeof payload.tool_name === "string"
+      ? payload.tool_name.slice(0, 120)
+      : "unknown";
+  const projectId =
+    overrides.projectId ??
+    payload.project_id ??
+    hashPath(payload.cwd ?? "unknown-project");
+  const identity = `${projectId}:${provider}:${sessionId}:${eventType}:${occurredAt}:${toolClass}:${rawPaths.join(",")}`;
+  const idempotencyKey = createHash("sha256").update(identity).digest("hex");
   return {
-    id: randomUUID(),
+    id: `event-${idempotencyKey.slice(0, 32)}`,
     schemaVersion: 1,
     occurredAt,
     receivedAt: now,
     provider,
     sessionId,
-    projectId: payload.project_id ?? hashPath(payload.cwd ?? "unknown-project"),
+    projectId,
     eventType,
     paths: rawPaths,
-    payload: clean,
-    redaction: { applied: redactionProbe.applied, rules: redactionProbe.rules },
-    idempotencyKey: createHash("sha256").update(identity).digest("hex"),
-    correlationId: randomUUID(),
-    traceId: randomUUID().replaceAll("-", ""),
-    extensionMetadata: {},
+    payload: {
+      hookEvent: eventName.slice(0, 120),
+      toolClass,
+    },
+    sourceRef: {
+      type: "hook-event",
+      label: `${provider} ${eventType}`,
+      sessionId,
+      sourceHash: idempotencyKey,
+    },
+    redaction: { applied: true, rules: ["strict-hook-allowlist"] },
+    idempotencyKey,
+    correlationId: `corr-${idempotencyKey.slice(0, 24)}`,
+    traceId: idempotencyKey.slice(0, 32),
+    extensionMetadata: { ingestion: "provider-hook-v1" },
   };
+}
+
+function extractPaths(payload: HookPayload) {
+  const candidates: unknown[] = [
+    payload.file_path,
+    payload.tool_input?.file_path,
+    payload.tool_input?.path,
+    payload.tool_input?.filePath,
+  ];
+  const command = payload.tool_input?.command;
+  if (typeof command === "string") {
+    for (const match of command.matchAll(
+      /^\*\*\* (?:Add|Update|Delete) File:\s*(.+)$/gm,
+    ))
+      candidates.push(match[1]);
+    for (const match of command.matchAll(/^\*\*\* Move to:\s*(.+)$/gm))
+      candidates.push(match[1]);
+  }
+  return Array.from(
+    new Set(
+      candidates
+        .filter((item): item is string => typeof item === "string")
+        .map((path) => path.trim().replaceAll("\\", "/"))
+        .filter((path) => path.length > 0 && path.length <= 1024),
+    ),
+  ).slice(0, 100);
+}
+
+function stringField(payload: HookPayload, key: string) {
+  return typeof payload[key] === "string"
+    ? (payload[key] as string)
+    : undefined;
 }
 
 function mapEvent(name: string): AgentEvent["eventType"] {
@@ -83,20 +130,9 @@ function hashPath(path: string) {
 export async function deliverBestEffort(
   event: AgentEvent,
   endpoint = "http://127.0.0.1:47831/events",
+  options: Omit<EventOutboxOptions, "endpoint"> = {},
 ) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 350);
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(event),
-      signal: controller.signal,
-    });
-    return { delivered: response.ok, status: response.status };
-  } catch {
-    return { delivered: false, status: 0 };
-  } finally {
-    clearTimeout(timer);
-  }
+  return new EventOutbox(event.projectId, { ...options, endpoint }).deliver(
+    event,
+  );
 }
