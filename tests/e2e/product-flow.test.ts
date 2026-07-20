@@ -49,6 +49,9 @@ describe("product acceptance flow", () => {
     );
     expect(source).toMatch(/Delivery is not treated as model\s+knowledge/);
     expect(source).toContain("No transcript store");
-    expect(source).toContain("Context before action");
+    expect(source).toContain("Two agents. One repository. No stale decisions.");
+    expect(source).toContain(
+      "Shared execution state, not a shared transcript.",
+    );
   });
 });

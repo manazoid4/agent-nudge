@@ -8,7 +8,7 @@ Inputs:
 
 - `projectId` — required isolation boundary
 - `recipientSessionId` — optional recipient filter
-- current sessions, facts and nudges from the local ledger
+- current sessions, facts, nudges, task intent, and claims from the local ledger
 
 Output:
 
@@ -37,3 +37,5 @@ MCP tool: agent_nudge_portfolio
 ```
 
 These reads remain local. The public website uses public-safe fixture data and never reads a user's repositories.
+
+V0.3 Live Sync adds a recipient digest that also covers present peers and active claim leases. This digest is used at the coordination boundary; the original context-pack endpoint remains available as the stable fact/nudge projection.

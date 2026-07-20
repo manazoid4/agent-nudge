@@ -1,11 +1,23 @@
 import { randomUUID } from "node:crypto";
-import Fastify from "fastify";
+import Fastify, { type FastifyReply } from "fastify";
+import { z } from "zod";
 import {
   buildAllScenarios,
   buildScenario,
   type DemoScenario,
 } from "../core/demo.js";
-import { eventSchema, factSchema, sessionSchema } from "../core/schemas.js";
+import {
+  acknowledgeRequestSchema,
+  activeTaskSchema,
+  checkInSchema,
+  claimRequestSchema,
+  eventSchema,
+  factSchema,
+  publishFactInputSchema,
+  releaseClaimRequestSchema,
+  sessionSchema,
+  syncRequestSchema,
+} from "../core/schemas.js";
 import type { Nudge } from "../core/schemas.js";
 import { sanitizeObject } from "../core/redaction.js";
 import { NudgeDatabase } from "../storage/database.js";
@@ -18,7 +30,7 @@ export function createServer(database: NudgeDatabase) {
   app.get("/health", async () => ({
     ok: true,
     service: "agent-nudge",
-    version: "0.2.0",
+    version: "0.3.0",
     localOnly: true,
     at: new Date().toISOString(),
   }));
@@ -37,6 +49,117 @@ export function createServer(database: NudgeDatabase) {
   app.get("/portfolio", async () => database.portfolioSummary());
   app.get("/export", async () => database.exportAll());
   app.get("/purge/preview", async () => database.purgePreview());
+
+  app.post("/v1/sessions/check-in", async (request, reply) => {
+    const parsed = checkInSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_check_in", details: parsed.error.flatten() });
+    try {
+      return reply.code(200).send(database.checkIn(parsed.data));
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/sessions/:id/heartbeat", async (request, reply) => {
+    const params = request.params as { id: string };
+    const parsed = z
+      .object({
+        projectId: z.string().min(1).max(160),
+        task: activeTaskSchema.optional(),
+      })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_heartbeat", details: parsed.error.flatten() });
+    try {
+      return database.heartbeat(
+        parsed.data.projectId,
+        params.id,
+        parsed.data.task,
+      );
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/facts", async (request, reply) => {
+    const parsed = publishFactInputSchema.safeParse(
+      sanitizeObject(request.body),
+    );
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_fact", details: parsed.error.flatten() });
+    try {
+      return reply.code(201).send(database.publishFact(parsed.data));
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/sync", async (request, reply) => {
+    const parsed = syncRequestSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_sync", details: parsed.error.flatten() });
+    try {
+      return database.sync(parsed.data);
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/claims", async (request, reply) => {
+    const parsed = claimRequestSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_claim", details: parsed.error.flatten() });
+    try {
+      const result = database.acquireClaim(parsed.data);
+      return reply.code(result.acquired ? 201 : 409).send(result);
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/claims/:id/release", async (request, reply) => {
+    const params = request.params as { id: string };
+    const parsed = releaseClaimRequestSchema
+      .omit({ claimId: true })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply
+        .code(400)
+        .send({ error: "invalid_release", details: parsed.error.flatten() });
+    try {
+      return database.releaseClaim({ ...parsed.data, claimId: params.id });
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
+
+  app.post("/v1/nudges/:id/acknowledge", async (request, reply) => {
+    const params = request.params as { id: string };
+    const parsed = acknowledgeRequestSchema
+      .omit({ nudgeId: true })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({
+        error: "invalid_acknowledgement",
+        details: parsed.error.flatten(),
+      });
+    try {
+      return database.acknowledge({ ...parsed.data, nudgeId: params.id });
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
 
   app.post("/sessions", async (request, reply) => {
     const parsed = sessionSchema.safeParse(request.body);
@@ -66,8 +189,13 @@ export function createServer(database: NudgeDatabase) {
       return reply
         .code(400)
         .send({ error: "invalid_fact", details: parsed.error.flatten() });
-    database.put("facts", parsed.data);
-    return reply.code(201).send(parsed.data);
+    if (parsed.data.sensitivity === "secret-blocked")
+      return reply.code(400).send({ error: "secret_fact_rejected" });
+    try {
+      return reply.code(201).send(database.recordAndFanOutFact(parsed.data));
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
   });
 
   app.post("/nudges/:id/action", async (request, reply) => {
@@ -124,4 +252,14 @@ export function createServer(database: NudgeDatabase) {
   });
 
   return app;
+}
+
+function sendLiveSyncError(reply: FastifyReply, error: unknown) {
+  const code = error instanceof Error ? error.message : String(error);
+  const status = code.endsWith("_not_found")
+    ? 404
+    : code.endsWith("_not_owned") || code === "session_project_mismatch"
+      ? 403
+      : 409;
+  return reply.code(status).send({ error: code });
 }

@@ -14,6 +14,12 @@ async function main() {
   if (command === "doctor") return doctor();
   if (command === "demo") return demo();
   if (command === "install") return installPreview();
+  if (command === "check-in") return checkIn();
+  if (command === "sync") return sync();
+  if (command === "claim") return claim();
+  if (command === "release-claim") return releaseClaim();
+  if (command === "publish") return publishFact();
+  if (command === "acknowledge") return acknowledge();
   if (command === "context-pack") return contextPack();
   if (command === "portfolio") return portfolio();
   if (command === "export") return exportData();
@@ -30,12 +36,200 @@ Commands:
   doctor                    Check runtime and local daemon
   demo                      Run all four proof scenarios
   install [all] --dry-run   Preview safe Claude/Codex project integration
+  check-in <session> <provider> <project> <task> [paths]
+                            Join or heartbeat a live project session
+  sync <project> <session> [cursor]
+                            Pull the recipient's live context delta
+  claim <project> <session> <path> [lease-seconds]
+                            Acquire or renew a bounded path lease
+  release-claim <project> <session> <claim-id>
+                            Release an owned path lease
+  publish <project> <session> <kind> <title> <summary> [path]
+                            Publish and automatically route a fact
+  acknowledge <project> <session> <nudge-id>
+                            Record receipt of one addressed nudge
   context-pack <project> [session]  Read pre-action context from the daemon
   portfolio                 Show local cross-project context health
   export [path]             Export local ledger as JSON
   purge --preview           Show what would be removed
   help                      Show this help
 `);
+}
+
+async function checkIn() {
+  const [sessionId, provider, projectId, taskSummary, paths = ""] =
+    process.argv.slice(3);
+  if (!sessionId || !provider || !projectId || !taskSummary) {
+    console.error(
+      "Usage: agent-nudge check-in <session> <provider> <project> <task> [comma-separated-paths]",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const allowed = ["claude-code", "codex", "opencode", "cursor", "unknown"];
+  if (!allowed.includes(provider)) {
+    console.error(`Unsupported provider: ${provider}`);
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson("/v1/sessions/check-in", {
+        sessionId,
+        provider,
+        projectId,
+        projectName: projectId,
+        cwd: process.cwd(),
+        task: {
+          summary: taskSummary,
+          paths: splitList(paths),
+          tags: [],
+        },
+      }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function sync() {
+  const projectId = process.argv[3];
+  const sessionId = process.argv[4];
+  const cursor = Number(process.argv[5] ?? 0);
+  if (!projectId || !sessionId || !Number.isInteger(cursor) || cursor < 0) {
+    console.error("Usage: agent-nudge sync <project> <session> [cursor]");
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson("/v1/sync", { projectId, sessionId, cursor }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function claim() {
+  const projectId = process.argv[3];
+  const sessionId = process.argv[4];
+  const path = process.argv[5];
+  const leaseSeconds = Number(process.argv[6] ?? 300);
+  if (!projectId || !sessionId || !path || !Number.isInteger(leaseSeconds)) {
+    console.error(
+      "Usage: agent-nudge claim <project> <session> <path> [lease-seconds]",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson("/v1/claims", {
+        projectId,
+        sessionId,
+        path,
+        leaseSeconds,
+      }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function releaseClaim() {
+  const projectId = process.argv[3];
+  const sessionId = process.argv[4];
+  const claimId = process.argv[5];
+  if (!projectId || !sessionId || !claimId) {
+    console.error(
+      "Usage: agent-nudge release-claim <project> <session> <claim-id>",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson(`/v1/claims/${encodeURIComponent(claimId)}/release`, {
+        projectId,
+        sessionId,
+      }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function publishFact() {
+  const [projectId, authorSessionId, kind, title, factSummary, path] =
+    process.argv.slice(3);
+  if (!projectId || !authorSessionId || !kind || !title || !factSummary) {
+    console.error(
+      "Usage: agent-nudge publish <project> <session> <kind> <title> <summary> [path]",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson("/v1/facts", {
+        projectId,
+        authorSessionId,
+        kind,
+        title,
+        summary: factSummary,
+        paths: path ? [path] : [],
+        tags: [],
+        sourceLabel: "Agent Nudge CLI",
+      }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function acknowledge() {
+  const projectId = process.argv[3];
+  const sessionId = process.argv[4];
+  const nudgeId = process.argv[5];
+  if (!projectId || !sessionId || !nudgeId) {
+    console.error(
+      "Usage: agent-nudge acknowledge <project> <session> <nudge-id>",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      await postJson(`/v1/nudges/${encodeURIComponent(nudgeId)}/acknowledge`, {
+        projectId,
+        sessionId,
+      }),
+      null,
+      2,
+    ),
+  );
+}
+
+async function postJson(path: string, payload: unknown) {
+  const response = await fetch(`${endpoint}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(1500),
+  });
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(
+      `Daemon request failed (${response.status}): ${JSON.stringify(body)}`,
+    );
+  return body;
+}
+
+function splitList(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 async function doctor() {
