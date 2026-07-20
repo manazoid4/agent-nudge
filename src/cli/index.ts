@@ -14,6 +14,8 @@ async function main() {
   if (command === "doctor") return doctor();
   if (command === "demo") return demo();
   if (command === "install") return installPreview();
+  if (command === "context-pack") return contextPack();
+  if (command === "portfolio") return portfolio();
   if (command === "export") return exportData();
   if (command === "purge") return purgePreview();
   console.error(`Unknown command: ${command}`);
@@ -28,6 +30,8 @@ Commands:
   doctor                    Check runtime and local daemon
   demo                      Run all four proof scenarios
   install [all] --dry-run   Preview safe Claude/Codex project integration
+  context-pack <project> [session]  Read pre-action context from the daemon
+  portfolio                 Show local cross-project context health
   export [path]             Export local ledger as JSON
   purge --preview           Show what would be removed
   help                      Show this help
@@ -132,6 +136,32 @@ async function exportData() {
     join(process.cwd(), `agent-nudge-export-${Date.now()}.json`);
   writeFileSync(output, `${JSON.stringify(data, null, 2)}\n`, { flag: "wx" });
   console.log(output);
+}
+
+async function contextPack() {
+  const projectId = process.argv[3];
+  const recipientSessionId = process.argv[4];
+  if (!projectId) {
+    console.error("Usage: agent-nudge context-pack <project> [session]");
+    process.exitCode = 2;
+    return;
+  }
+  const query = new URLSearchParams({ projectId });
+  if (recipientSessionId) query.set("recipientSessionId", recipientSessionId);
+  const response = await fetch(`${endpoint}/context-pack?${query}`, {
+    signal: AbortSignal.timeout(1500),
+  });
+  if (!response.ok) throw new Error(`Context pack failed: ${response.status}`);
+  console.log(JSON.stringify(await response.json(), null, 2));
+}
+
+async function portfolio() {
+  const response = await fetch(`${endpoint}/portfolio`, {
+    signal: AbortSignal.timeout(1500),
+  });
+  if (!response.ok)
+    throw new Error(`Portfolio read failed: ${response.status}`);
+  console.log(JSON.stringify(await response.json(), null, 2));
 }
 
 async function purgePreview() {

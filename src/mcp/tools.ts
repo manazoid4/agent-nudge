@@ -4,7 +4,7 @@ import { buildScenario } from "../core/demo.js";
 import type { NudgeDatabase } from "../storage/database.js";
 
 export function createMcpServer(database: NudgeDatabase) {
-  const server = new McpServer({ name: "agent-nudge", version: "0.1.0" });
+  const server = new McpServer({ name: "agent-nudge", version: "0.2.0" });
 
   server.tool(
     "agent_nudge_status",
@@ -55,6 +55,39 @@ export function createMcpServer(database: NudgeDatabase) {
         {
           type: "text",
           text: JSON.stringify(database.snapshot(projectId).nudges),
+        },
+      ],
+    }),
+  );
+
+  server.tool(
+    "agent_nudge_context_pack",
+    "Return the deterministic, project-scoped context pack an agent should review before a consequential action.",
+    {
+      projectId: z.string(),
+      recipientSessionId: z.string().optional(),
+    },
+    async ({ projectId, recipientSessionId }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            database.contextPack(projectId, recipientSessionId),
+          ),
+        },
+      ],
+    }),
+  );
+
+  server.tool(
+    "agent_nudge_portfolio",
+    "Return context health across projects already known to the local ledger.",
+    {},
+    async () => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(database.portfolioSummary()),
         },
       ],
     }),

@@ -15,6 +15,13 @@ describe("product acceptance flow", () => {
       state: "queued",
     });
     expect(demo.nudge.relevanceFactors.length).toBeGreaterThanOrEqual(4);
+    const beforePack = (
+      await app.inject({
+        method: "GET",
+        url: "/context-pack?projectId=project-agent-nudge&recipientSessionId=codex-conflict",
+      })
+    ).json();
+    expect(beforePack.status).toBe("HOLD");
     const acknowledged = (
       await app.inject({
         method: "POST",
@@ -23,6 +30,14 @@ describe("product acceptance flow", () => {
       })
     ).json();
     expect(acknowledged.state).toBe("acknowledged");
+    const afterPack = (
+      await app.inject({
+        method: "GET",
+        url: "/context-pack?projectId=project-agent-nudge&recipientSessionId=codex-conflict",
+      })
+    ).json();
+    expect(afterPack.status).toBe("CLEAR");
+    expect(afterPack.digestHash).not.toBe(beforePack.digestHash);
     await app.close();
     db.close();
   });

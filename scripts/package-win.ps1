@@ -5,6 +5,7 @@ $output = [System.IO.Path]::GetFullPath((Join-Path $repo 'release'))
 $runtime = [System.IO.Path]::GetFullPath((Join-Path $repo 'node_modules\electron\dist'))
 $unpacked = [System.IO.Path]::GetFullPath((Join-Path $output 'win-unpacked'))
 $stage = [System.IO.Path]::GetFullPath((Join-Path $output 'staging-app'))
+$version = (Get-Content -Raw -LiteralPath (Join-Path $repo 'package.json') | ConvertFrom-Json).version
 
 foreach ($path in @($output, $runtime, $unpacked, $stage)) {
   if (-not $path.StartsWith($repo, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -42,8 +43,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Failed to create Windows distributables' }
 
 Remove-Item -LiteralPath $stage -Recurse -Force
 
-$installer = Join-Path $output 'Agent-Nudge-Setup-0.1.0-x64.exe'
-$portable = Join-Path $output 'Agent-Nudge-Portable-0.1.0-x64.exe'
+$installer = Join-Path $output "Agent-Nudge-Setup-$version-x64.exe"
+$portable = Join-Path $output "Agent-Nudge-Portable-$version-x64.exe"
 if (-not (Test-Path -LiteralPath $installer) -or -not (Test-Path -LiteralPath $portable)) {
   throw 'Expected Windows artifacts were not created.'
 }

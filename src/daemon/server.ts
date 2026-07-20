@@ -18,13 +18,23 @@ export function createServer(database: NudgeDatabase) {
   app.get("/health", async () => ({
     ok: true,
     service: "agent-nudge",
-    version: "0.1.0",
+    version: "0.2.0",
     localOnly: true,
     at: new Date().toISOString(),
   }));
   app.get("/snapshot", async (request) =>
     database.snapshot((request.query as { projectId?: string }).projectId),
   );
+  app.get("/context-pack", async (request, reply) => {
+    const query = request.query as {
+      projectId?: string;
+      recipientSessionId?: string;
+    };
+    if (!query.projectId)
+      return reply.code(400).send({ error: "project_id_required" });
+    return database.contextPack(query.projectId, query.recipientSessionId);
+  });
+  app.get("/portfolio", async () => database.portfolioSummary());
   app.get("/export", async () => database.exportAll());
   app.get("/purge/preview", async () => database.purgePreview());
 

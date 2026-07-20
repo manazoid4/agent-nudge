@@ -23,6 +23,8 @@ describe("MCP server", () => {
         "agent_nudge_status",
         "agent_nudge_record_demo",
         "agent_nudge_inbox",
+        "agent_nudge_context_pack",
+        "agent_nudge_portfolio",
       ]),
     );
 
@@ -45,6 +47,30 @@ describe("MCP server", () => {
     expect(inboxText && JSON.parse(inboxText)[0]).toMatchObject({
       title: "Claude is editing cache.ts",
       deliveryClass: "BLOCK",
+    });
+
+    const pack = await client.callTool({
+      name: "agent_nudge_context_pack",
+      arguments: {
+        projectId: "project-agent-nudge",
+        recipientSessionId: "codex-conflict",
+      },
+    });
+    const packText = (pack.content as Array<{ text?: string }>)[0]?.text;
+    expect(packText && JSON.parse(packText)).toMatchObject({
+      status: "HOLD",
+      counts: { blockers: 1 },
+    });
+
+    const portfolio = await client.callTool({
+      name: "agent_nudge_portfolio",
+      arguments: {},
+    });
+    const portfolioText = (portfolio.content as Array<{ text?: string }>)[0]
+      ?.text;
+    expect(portfolioText && JSON.parse(portfolioText).metrics).toMatchObject({
+      projects: 1,
+      openHolds: 1,
     });
 
     await client.close();

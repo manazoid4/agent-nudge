@@ -6,6 +6,6 @@
 - Store structured facts and short opt-in summaries—not prompts, responses, files, terminal transcripts, clipboard, or browser history.
 - Keep queries project-scoped and test cross-project isolation.
 - Use Electron context isolation, sandbox mode, no renderer Node integration, and deny in-app navigation to remote sites.
-- Preview configuration changes and preserve unrelated settings. V0.1.0 does not apply configuration automatically.
+- Preview configuration changes and preserve unrelated settings. V0.2.0 does not apply configuration automatically.
 
 This unsigned local build has not undergone an external security audit. Report vulnerabilities privately through GitHub security advisories rather than public issues.

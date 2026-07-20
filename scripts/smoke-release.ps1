@@ -1,7 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$portable = Join-Path $root 'release\Agent-Nudge-Portable-0.1.0-x64.exe'
+$version = (Get-Content -Raw -LiteralPath (Join-Path $root 'package.json') | ConvertFrom-Json).version
+$portable = Join-Path $root "release\Agent-Nudge-Portable-$version-x64.exe"
 $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
 $launcher = $null
 $listenerProcessId = $null

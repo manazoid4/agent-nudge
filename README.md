@@ -15,6 +15,8 @@
 
 Every delivered nudge shows its score factors, evidence reference, freshness, recipient, state, and reason for arriving now.
 
+The v0.2 Context Mesh adds deterministic pre-action context packs and ledger-derived health across projects. See [the complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
+
 ## Run locally
 
 Requirements: Windows 10/11, Node.js 20 or newer, npm.
@@ -53,11 +55,13 @@ The desktop **Run proof** action writes all four fixture scenarios through the s
 agent-nudge doctor
 agent-nudge demo
 agent-nudge install all --scope project --dry-run
+agent-nudge context-pack project-agent-nudge codex-session-id
+agent-nudge portfolio
 agent-nudge export [output.json]
 agent-nudge purge --preview
 ```
 
-The installer is preview-only in v0.1.0. It shows exact project-scoped Claude/Codex changes and never touches real configuration during tests.
+The installer is preview-only in v0.2.0. It shows exact project-scoped Claude/Codex changes and never touches real configuration during tests.
 
 ## Architecture
 

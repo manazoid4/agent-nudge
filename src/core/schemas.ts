@@ -158,6 +158,71 @@ export const nudgeSchema = z.object({
   extensionMetadata: z.record(z.unknown()).default({}),
 });
 
+export const contextPackItemSchema = z.object({
+  nudgeId: z.string(),
+  factId: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  deliveryClass: deliveryClassSchema,
+  state: nudgeStateSchema,
+  relevanceScore: z.number(),
+  confidence: z.number().min(0).max(1),
+  whyNow: z.string(),
+  paths: z.array(z.string()),
+  sourceRefs: z.array(sourceRefSchema).min(1),
+});
+
+export const contextPackSchema = z.object({
+  id: z.string(),
+  schemaVersion: z.literal(1),
+  projectId: z.string(),
+  recipientSessionId: z.string().optional(),
+  generatedAt: z.string().datetime(),
+  digestHash: z.string().length(64),
+  status: z.enum(["CLEAR", "REVIEW", "HOLD"]),
+  summary: z.string(),
+  counts: z.object({
+    activeAgents: z.number().int().nonnegative(),
+    blockers: z.number().int().nonnegative(),
+    actNow: z.number().int().nonnegative(),
+    includedFacts: z.number().int().nonnegative(),
+  }),
+  items: z.array(contextPackItemSchema),
+  integrity: z.object({
+    algorithm: z.literal("sha256"),
+    inputCount: z.number().int().nonnegative(),
+    sourceHashes: z.array(z.string()),
+  }),
+});
+
+export const portfolioProjectSchema = z.object({
+  projectId: z.string(),
+  projectName: z.string(),
+  state: z.enum(["hold", "attention", "protected", "quiet"]),
+  healthScore: z.number().int().min(0).max(100),
+  confidence: z.number().min(0).max(1),
+  activeAgents: z.number().int().nonnegative(),
+  openHolds: z.number().int().nonnegative(),
+  queued: z.number().int().nonnegative(),
+  acknowledged: z.number().int().nonnegative(),
+  staleFacts: z.number().int().nonnegative(),
+  receiptCount: z.number().int().nonnegative(),
+  latestActivityAt: z.string().datetime().optional(),
+});
+
+export const portfolioSummarySchema = z.object({
+  generatedAt: z.string().datetime(),
+  projects: z.array(portfolioProjectSchema),
+  metrics: z.object({
+    projects: z.number().int().nonnegative(),
+    protectedProjects: z.number().int().nonnegative(),
+    projectsNeedingAttention: z.number().int().nonnegative(),
+    openHolds: z.number().int().nonnegative(),
+    activeAgents: z.number().int().nonnegative(),
+    acknowledged: z.number().int().nonnegative(),
+  }),
+});
+
 export type AgentProvider = z.infer<typeof providerSchema>;
 export type AgentSession = z.infer<typeof sessionSchema>;
 export type AgentEvent = z.infer<typeof eventSchema>;
@@ -165,6 +230,10 @@ export type ContextFact = z.infer<typeof factSchema>;
 export type Nudge = z.infer<typeof nudgeSchema>;
 export type RelevanceFactor = z.infer<typeof factorSchema>;
 export type DeliveryClass = z.infer<typeof deliveryClassSchema>;
+export type ContextPack = z.infer<typeof contextPackSchema>;
+export type ContextPackItem = z.infer<typeof contextPackItemSchema>;
+export type PortfolioProject = z.infer<typeof portfolioProjectSchema>;
+export type PortfolioSummary = z.infer<typeof portfolioSummarySchema>;
 
 export type NudgeDecision = {
   score: number;

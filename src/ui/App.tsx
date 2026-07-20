@@ -26,11 +26,20 @@ import {
   TerminalSquare,
   X,
 } from "lucide-react";
-import { sampleSnapshot } from "./sample-data.js";
+import { samplePortfolio, sampleSnapshot } from "./sample-data.js";
 
 type Snapshot = typeof sampleSnapshot;
+type Portfolio = typeof samplePortfolio;
+type PortfolioProject = Portfolio["projects"][number];
 type NudgeItem = Snapshot["nudges"][number];
-type View = "overview" | "inbox" | "agents" | "timeline" | "rules" | "settings";
+type View =
+  | "overview"
+  | "portfolio"
+  | "inbox"
+  | "agents"
+  | "timeline"
+  | "rules"
+  | "settings";
 
 const endpoint = window.agentNudge?.endpoint ?? "http://127.0.0.1:47831";
 const isDesktop =
@@ -191,6 +200,16 @@ function Landing() {
               Become a design partner <ArrowRight size={15} />
             </a>
           </div>
+          <div className="price-line">
+            <span>Team hypothesis</span>
+            <strong>
+              £299<em>/mo</em>
+            </strong>
+            <small>Shared mesh · policy · audit · 10 seats</small>
+            <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20team%20pilot">
+              Discuss a team pilot <ArrowRight size={15} />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -252,6 +271,7 @@ function NudgeSpecimen() {
 function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
   const [view, setView] = useState<View>("overview");
   const [snapshot, setSnapshot] = useState<Snapshot>(sampleSnapshot);
+  const [portfolio, setPortfolio] = useState<Portfolio>(samplePortfolio);
   const [selectedId, setSelectedId] = useState(snapshot.nudges[0]?.id ?? "");
   const [connected, setConnected] = useState(!isPublicDemo);
   const [busy, setBusy] = useState(false);
@@ -262,12 +282,17 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
   const refresh = useCallback(async () => {
     if (isPublicDemo) return;
     try {
-      const response = await fetch(
-        `${endpoint}/snapshot?projectId=project-agent-nudge`,
-      );
+      const [response, portfolioResponse] = await Promise.all([
+        fetch(`${endpoint}/snapshot?projectId=project-agent-nudge`),
+        fetch(`${endpoint}/portfolio`),
+      ]);
       if (!response.ok) throw new Error("offline");
       const data = (await response.json()) as Snapshot;
       setSnapshot(data.nudges.length ? data : sampleSnapshot);
+      if (portfolioResponse.ok) {
+        const portfolioData = (await portfolioResponse.json()) as Portfolio;
+        setPortfolio(portfolioData);
+      }
       setConnected(true);
     } catch {
       setConnected(false);
@@ -342,6 +367,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           {(
             [
               ["overview", Gauge, "Overview"],
+              ["portfolio", Layers3, "Context mesh"],
               ["inbox", Inbox, "Nudge inbox"],
               ["agents", Bot, "Live agents"],
               ["timeline", Activity, "Timeline"],
@@ -373,7 +399,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   : "Daemon offline"}
             </span>
           </div>
-          <small>{window.agentNudge?.version ?? "v0.1.0"}</small>
+          <small>{window.agentNudge?.version ?? "v0.2.0"}</small>
         </div>
       </aside>
       <div className="workspace">
@@ -402,6 +428,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
         {view === "overview" && (
           <Overview snapshot={snapshot} runDemo={runDemo} />
         )}
+        {view === "portfolio" && <ContextMeshView portfolio={portfolio} />}
         {view === "inbox" && (
           <InboxView
             snapshot={snapshot}
@@ -419,6 +446,187 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
       </div>
     </div>
   );
+}
+
+function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
+  const [selectedId, setSelectedId] = useState(
+    portfolio.projects[0]?.projectId ?? "",
+  );
+  const selected =
+    portfolio.projects.find((project) => project.projectId === selectedId) ??
+    portfolio.projects[0];
+
+  useEffect(() => {
+    if (
+      portfolio.projects.length &&
+      !portfolio.projects.some((project) => project.projectId === selectedId)
+    ) {
+      setSelectedId(portfolio.projects[0]?.projectId ?? "");
+    }
+  }, [portfolio, selectedId]);
+
+  return (
+    <div className="page mesh-page">
+      <div className="page-heading">
+        <div>
+          <p>Cross-repository assurance</p>
+          <h1>Context mesh</h1>
+          <span>
+            One quiet control surface for freshness, holds, receipts, and agent
+            coverage across locally known projects.
+          </span>
+        </div>
+        <div className="mesh-confidence">
+          <ShieldCheck size={18} />
+          <div>
+            <strong>Evidence, not memory claims</strong>
+            <span>Every status is derived from local ledger receipts.</span>
+          </div>
+        </div>
+      </div>
+
+      <section className="metric-grid mesh-metrics">
+        <Metric
+          icon={Layers3}
+          value={String(portfolio.metrics.projects)}
+          label="known projects"
+          detail="project-scoped by default"
+        />
+        <Metric
+          icon={ShieldCheck}
+          value={String(portfolio.metrics.protectedProjects)}
+          label="protected"
+          detail="current context + receipts"
+        />
+        <Metric
+          icon={AlertOctagon}
+          value={String(portfolio.metrics.openHolds)}
+          label="open holds"
+          detail="stop before consequential action"
+        />
+        <Metric
+          icon={Check}
+          value={String(portfolio.metrics.acknowledged)}
+          label="verified acknowledgements"
+          detail="delivery is measured separately"
+        />
+      </section>
+
+      {portfolio.projects.length ? (
+        <div className="mesh-layout">
+          <section className="panel mesh-projects">
+            <div className="panel-head">
+              <div>
+                <h2>Project attention order</h2>
+                <p>Risk first, then weakest context health.</p>
+              </div>
+              <span>{portfolio.metrics.activeAgents} active agents</span>
+            </div>
+            <div className="mesh-list" role="list">
+              {portfolio.projects.map((project) => (
+                <button
+                  key={project.projectId}
+                  className={
+                    selected?.projectId === project.projectId ? "active" : ""
+                  }
+                  onClick={() => setSelectedId(project.projectId)}
+                >
+                  <StateMark state={project.state} />
+                  <div>
+                    <strong>{project.projectName}</strong>
+                    <span>
+                      {project.activeAgents} agent
+                      {project.activeAgents === 1 ? "" : "s"} ·{" "}
+                      {project.receiptCount} receipts
+                    </span>
+                  </div>
+                  <div className="mesh-score">
+                    <strong>{project.healthScore}</strong>
+                    <span>{project.state}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {selected && <ProjectAssurance project={selected} />}
+        </div>
+      ) : (
+        <section className="panel empty-mesh">
+          <Layers3 size={28} />
+          <h2>No projects in the local ledger yet</h2>
+          <p>
+            Register an agent session or run the proof. Agent Nudge will never
+            discover or upload repositories behind your back.
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ProjectAssurance({ project }: { project: PortfolioProject }) {
+  const packStatus = project.openHolds
+    ? "HOLD"
+    : project.queued
+      ? "REVIEW"
+      : "CLEAR";
+  return (
+    <section className="panel assurance-card">
+      <div className="assurance-title">
+        <div>
+          <span>PRE-ACTION CONTEXT PACK</span>
+          <h2>{project.projectName}</h2>
+        </div>
+        <b className={`pack-status ${packStatus.toLowerCase()}`}>
+          {packStatus}
+        </b>
+      </div>
+      <p className="assurance-summary">
+        {packStatus === "HOLD"
+          ? `${project.openHolds} blocking conflict must be reviewed before the next write or commit.`
+          : packStatus === "REVIEW"
+            ? `${project.queued} source-backed context items are waiting for the next boundary.`
+            : "No consequential context is waiting. The next action can proceed."}
+      </p>
+      <dl className="assurance-grid">
+        <div>
+          <dt>Confidence</dt>
+          <dd>{Math.round(project.confidence * 100)}%</dd>
+        </div>
+        <div>
+          <dt>Receipts</dt>
+          <dd>{project.receiptCount}</dd>
+        </div>
+        <div>
+          <dt>Stale facts</dt>
+          <dd>{project.staleFacts}</dd>
+        </div>
+        <div>
+          <dt>Acknowledged</dt>
+          <dd>{project.acknowledged}</dd>
+        </div>
+      </dl>
+      <div className="integrity-strip">
+        <GitMerge size={17} />
+        <div>
+          <strong>Hash-addressed pack</strong>
+          <span>
+            Same ledger state produces the same digest; changed evidence creates
+            a new pack.
+          </span>
+        </div>
+      </div>
+      <div className="mesh-freshness">
+        <Clock3 size={16} />
+        Latest activity {relative(project.latestActivityAt)}
+      </div>
+    </section>
+  );
+}
+
+function StateMark({ state }: { state: PortfolioProject["state"] }) {
+  return <span className={`state-mark ${state}`} aria-label={state} />;
 }
 
 function Overview({
@@ -861,7 +1069,8 @@ function Brand({ compact = false }: { compact?: boolean }) {
     </a>
   );
 }
-function relative(date: string) {
+function relative(date?: string) {
+  if (!date) return "not recorded";
   const minutes = Math.max(
     0,
     Math.round((Date.now() - new Date(date).getTime()) / 60000),

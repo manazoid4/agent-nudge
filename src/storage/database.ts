@@ -1,6 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { buildContextPack } from "../core/context-pack.js";
+import { buildPortfolioSummary } from "../core/portfolio.js";
 import type {
   AgentEvent,
   AgentSession,
@@ -146,6 +148,26 @@ export class NudgeDatabase {
         queued: nudges.filter((item) => item.state === "queued").length,
       },
     };
+  }
+
+  contextPack(projectId: string, recipientSessionId?: string) {
+    const snapshot = this.snapshot(projectId);
+    return buildContextPack({
+      projectId,
+      recipientSessionId,
+      sessions: snapshot.sessions,
+      facts: snapshot.facts,
+      nudges: snapshot.nudges,
+    });
+  }
+
+  portfolioSummary() {
+    return buildPortfolioSummary({
+      sessions: this.list<AgentSession>("sessions"),
+      facts: this.list<ContextFact>("facts"),
+      nudges: this.list<Nudge>("nudges"),
+      events: this.list<AgentEvent>("events"),
+    });
   }
 
   seedScenario(data: {
