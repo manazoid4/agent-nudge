@@ -73,6 +73,9 @@ export function AssurancePage() {
             <a className="assurance-button secondary" href="/demo/portfolio">
               <Activity size={17} /> Explore the context mesh
             </a>
+            <a className="assurance-button secondary" href="/replay">
+              <FlaskConical size={17} /> Open Replay Lab
+            </a>
           </div>
           <div className="assurance-boundary">
             <LockKeyhole size={18} />
