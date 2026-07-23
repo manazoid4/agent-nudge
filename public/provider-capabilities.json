@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-23T00:00:00.000Z",
+  "boundary": "Capability labels describe covered configured paths only. Disabled, bypassed, drifted, hosted, untrusted, offline, or unsupported actions are downgraded.",
+  "providers": [
+    {
+      "provider": "opencode",
+      "displayName": "OpenCode",
+      "transport": "plugin",
+      "referenceAdapter": true,
+      "preTool": "enforced-when-trusted-and-online",
+      "postTool": "observed",
+      "subagents": true,
+      "taskGraph": true,
+      "worktreeIdentity": true,
+      "checkpoint": "provider-native",
+      "events": [
+        "session.created",
+        "session.updated",
+        "session.status",
+        "session.idle",
+        "session.error",
+        "session.compacted",
+        "session.diff",
+        "session.deleted",
+        "tool.execute.before",
+        "tool.execute.after",
+        "file.edited",
+        "file.watcher.updated",
+        "permission.asked",
+        "permission.replied",
+        "todo.updated",
+        "lsp.client.diagnostics",
+        "lsp.updated",
+        "command.executed",
+        "installation.updated",
+        "server.connected"
+      ]
+    },
+    {
+      "provider": "claude-code",
+      "displayName": "Claude Code",
+      "transport": "native-hook",
+      "referenceAdapter": false,
+      "preTool": "enforced-when-covered",
+      "postTool": "observed",
+      "subagents": true,
+      "taskGraph": true,
+      "worktreeIdentity": true,
+      "checkpoint": "none"
+    },
+    {
+      "provider": "codex",
+      "displayName": "Codex",
+      "transport": "native-hook",
+      "referenceAdapter": false,
+      "preTool": "enforced-only-in-trusted-project-hook-paths",
+      "postTool": "observed",
+      "subagents": false,
+      "taskGraph": false,
+      "worktreeIdentity": true,
+      "checkpoint": "none"
+    }
+  ]
+}

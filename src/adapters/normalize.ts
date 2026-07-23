@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import type { AgentEvent, AgentProvider } from "../core/schemas.js";
+import {
+  normalizeOpenCodeEvent,
+  type OpenCodeEventEnvelope,
+} from "./opencode-v2.js";
 import { EventOutbox, type EventOutboxOptions } from "./outbox.js";
 
 export type HookPayload = {
@@ -21,6 +25,9 @@ export function normalizeHook(
   payload: HookPayload,
   overrides: { projectId?: string; receivedAt?: string } = {},
 ): AgentEvent {
+  if (provider === "opencode")
+    return normalizeOpenCodeEvent(payload as OpenCodeEventEnvelope, overrides);
+
   const now = overrides.receivedAt ?? new Date().toISOString();
   const sessionId =
     payload.session_id ??
