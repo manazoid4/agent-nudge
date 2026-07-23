@@ -1,30 +1,37 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertOctagon,
   ArrowRight,
   BellRing,
+  BookOpen,
   Bot,
   Check,
   ChevronRight,
   CircleDot,
   Clock3,
+  Copy,
   Database,
+  Download,
   ExternalLink,
   FileCode2,
   Gauge,
+  Github,
   GitMerge,
   Inbox,
   Layers3,
+  LockKeyhole,
   Menu,
   Play,
   Radar,
   RefreshCw,
+  RotateCcw,
   Settings,
   ShieldCheck,
   Sparkles,
   TerminalSquare,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { samplePortfolio, sampleSnapshot } from "./sample-data.js";
 
@@ -45,33 +52,64 @@ const endpoint = window.agentNudge?.endpoint ?? "http://127.0.0.1:47831";
 const isDesktop =
   Boolean(window.agentNudge) ||
   new URLSearchParams(location.search).has("desktop");
+const githubUrl = "https://github.com/manazoid4/agent-nudge";
+const releasesUrl = `${githubUrl}/releases`;
+
+const dashboardViews: Array<{
+  id: View;
+  icon: LucideIcon;
+  label: string;
+}> = [
+  { id: "overview", icon: Gauge, label: "Live sync" },
+  { id: "portfolio", icon: Layers3, label: "Context mesh" },
+  { id: "inbox", icon: Inbox, label: "Nudge inbox" },
+  { id: "agents", icon: Bot, label: "Live agents" },
+  { id: "timeline", icon: Activity, label: "Timeline" },
+  { id: "rules", icon: Radar, label: "Rules" },
+  { id: "settings", icon: Settings, label: "Settings" },
+];
 
 export function App() {
-  const [showDemo, setShowDemo] = useState(location.hash === "#demo");
+  const [route, setRoute] = useState(() => location.pathname || "/");
+
   useEffect(() => {
-    const onHash = () => setShowDemo(location.hash === "#demo");
-    addEventListener("hashchange", onHash);
-    return () => removeEventListener("hashchange", onHash);
+    const update = () => setRoute(location.pathname || "/");
+    addEventListener("popstate", update);
+    return () => removeEventListener("popstate", update);
   }, []);
-  if (!isDesktop && !showDemo) return <Landing />;
-  return <Console isPublicDemo={!isDesktop} />;
+
+  useEffect(() => {
+    if (isDesktop) return;
+    const titles: Record<string, string> = {
+      "/": "Agent Nudge — Context before action",
+      "/download": "Download Agent Nudge",
+      "/docs": "Agent Nudge documentation",
+      "/security": "Agent Nudge security",
+      "/pricing": "Agent Nudge pricing",
+      "/changelog": "Agent Nudge changelog",
+    };
+    document.title = route.startsWith("/demo")
+      ? "Agent Nudge — Interactive demo"
+      : (titles[route] ?? "Agent Nudge");
+  }, [route]);
+
+  if (isDesktop) return <Console isPublicDemo={false} />;
+  if (route === "/") return <Landing />;
+  if (route === "/download") return <DownloadPage />;
+  if (route === "/docs") return <DocsPage />;
+  if (route === "/security") return <SecurityPage />;
+  if (route === "/pricing") return <PricingPage />;
+  if (route === "/changelog") return <ChangelogPage />;
+  if (route === "/demo" || route.startsWith("/demo/")) {
+    return <Console isPublicDemo />;
+  }
+  return <NotFoundPage />;
 }
 
 function Landing() {
   return (
     <main className="landing">
-      <header className="site-nav shell">
-        <Brand />
-        <nav aria-label="Main navigation">
-          <a href="#proof">Live proof</a>
-          <a href="#how">Protocol</a>
-          <a href="#bridge">Agent bridge</a>
-          <a href="#pricing">Pricing</a>
-        </nav>
-        <a className="button button-small" href="#demo">
-          Open live demo <ArrowRight size={16} />
-        </a>
-      </header>
+      <PublicHeader />
 
       <section className="hero shell">
         <div className="hero-copy">
@@ -82,18 +120,18 @@ function Landing() {
           </div>
           <h1>Two agents. One repository. No stale decisions.</h1>
           <p className="hero-lede">
-            Agent Nudge keeps Claude, Codex, and OpenCode on the same page with
-            task intent, expiring path claims, verified context deltas, and a
-            receipt before the next consequential move.
+            Agent Nudge gives Claude, Codex, and OpenCode the smallest verified
+            context delta before a consequential action—without copying complete
+            conversations into a shared memory store.
           </p>
           <div className="hero-actions">
-            <a className="button" href="#demo">
-              <Play size={17} fill="currentColor" /> Run the two-agent proof
-            </a>
-            <a
-              className="text-link"
-              href="https://github.com/manazoid4/agent-nudge"
-            >
+            <RouteLink className="button" to="/download">
+              <Download size={17} /> Get Agent Nudge
+            </RouteLink>
+            <RouteLink className="button secondary" to="/demo/inbox">
+              <Play size={17} fill="currentColor" /> Explore the proof
+            </RouteLink>
+            <a className="text-link" href={githubUrl}>
               View source <ExternalLink size={15} />
             </a>
           </div>
@@ -144,7 +182,7 @@ function Landing() {
             <div key={item}>
               <b>{index + 1}</b>
               <span>{item}</span>
-              {index < 4 && <ChevronRight />}
+              {index < 4 && <ChevronRight aria-hidden="true" />}
             </div>
           ))}
         </div>
@@ -153,8 +191,8 @@ function Landing() {
             <AlertOctagon />
             <h3>Stop edit collisions</h3>
             <p>
-              Warn Codex that Claude already claimed the exact file—before the
-              write, not after the merge conflict.
+              Warn Codex that Claude already claimed the exact file before the
+              write, rather than after a merge conflict.
             </p>
           </article>
           <article>
@@ -167,10 +205,10 @@ function Landing() {
           </article>
           <article>
             <RefreshCw />
-            <h3>Don’t repeat failed work</h3>
+            <h3>Do not repeat failed work</h3>
             <p>
-              Surface the test receipt from an abandoned approach without
-              injecting the previous session transcript.
+              Surface a test receipt from an abandoned approach without
+              injecting a previous session transcript.
             </p>
           </article>
         </div>
@@ -181,9 +219,8 @@ function Landing() {
           <p className="section-signal">LIVE CONNECT CONTRACT</p>
           <h2>Shared execution state, not a shared transcript.</h2>
           <p>
-            Every provider uses the same local loop. Capabilities stay honest:
-            MCP and localhost sync are portable now; provider-specific hard
-            blocking remains an explicit connector capability.
+            Every provider uses the same local loop. Capability labels stay
+            explicit, and connector changes are dry-run first and reversible.
           </p>
         </div>
         <div className="bridge-grid">
@@ -205,45 +242,12 @@ function Landing() {
             <ShieldCheck />
             <span>03 · RECEIPT</span>
             <h3>What changed because of it?</h3>
-            <p>Acknowledge, release, replan, or report the context as wrong.</p>
-          </article>
-        </div>
-        <div
-          className="bridge-grid connector-grid"
-          aria-label="Connector capabilities"
-        >
-          <article>
-            <Bot />
-            <span>CLAUDE CODE · ENFORCED*</span>
-            <h3>Project hook</h3>
-            <p>
-              Pre-action blocking for covered tools while project hooks are
-              enabled.
-            </p>
-          </article>
-          <article>
-            <TerminalSquare />
-            <span>CODEX · ENFORCED*</span>
-            <h3>Trusted project hook</h3>
-            <p>
-              Pre-action blocking for covered local tools after the hook is
-              reviewed and trusted.
-            </p>
-          </article>
-          <article>
-            <Layers3 />
-            <span>OPENCODE · ENFORCED*</span>
-            <h3>Project plugin</h3>
-            <p>
-              Pre-action blocking for covered tool executions while the plugin
-              is enabled.
-            </p>
+            <p>Acknowledge, release, replan, or report context as wrong.</p>
           </article>
         </div>
         <p className="capability-note">
-          * Hooks are guardrails, not a complete security boundary. Hosted,
-          disabled, bypassed, or otherwise uncovered actions remain outside
-          enforcement.
+          Hooks are guardrails rather than a complete security boundary. Hosted,
+          disabled, bypassed, or uncovered actions remain outside enforcement.
         </p>
       </section>
 
@@ -253,58 +257,42 @@ function Landing() {
             <p className="section-signal">USEFUL BEFORE YOU PAY</p>
             <h2>The local product stays free.</h2>
             <p>
-              Pay for encrypted teamwork, multi-project operations, policy,
-              audit, and controlled delivery—not for storing more noise.
+              Revenue is intended to come from controlled coordination across
+              people, devices, and systems—not from crippling the local core.
             </p>
           </div>
           <div className="price-line">
             <span>Community</span>
             <strong>£0</strong>
             <small>Local · private · open core</small>
-            <a href="#demo">
-              Try the full demo <ArrowRight size={15} />
-            </a>
+            <RouteLink to="/download">
+              Installation options <ArrowRight size={15} />
+            </RouteLink>
           </div>
           <div className="price-line featured">
             <span>Pro hypothesis</span>
             <strong>
               £19<em>/mo</em>
             </strong>
-            <small>Sync · rules · history · ROI</small>
+            <small>Encrypted sync · rules · history · ROI</small>
             <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20design%20partner">
               Become a design partner <ArrowRight size={15} />
             </a>
           </div>
           <div className="price-line studio">
-            <span>Studio hypothesis</span>
-            <strong>
-              £79<em>/mo</em>
-            </strong>
-            <small>5 people · 50 projects · GitHub + Obsidian</small>
-            <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20studio%20pilot">
-              Join a studio pilot <ArrowRight size={15} />
-            </a>
-          </div>
-          <div className="price-line">
             <span>Team hypothesis</span>
             <strong>
               £299<em>/mo</em>
             </strong>
-            <small>10 people · policy · approvals · audit</small>
-            <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20team%20pilot">
-              Discuss a team pilot <ArrowRight size={15} />
-            </a>
+            <small>Policy · approvals · audit · 10 seats</small>
+            <RouteLink to="/pricing">
+              View packaging <ArrowRight size={15} />
+            </RouteLink>
           </div>
         </div>
       </section>
 
-      <footer className="shell footer">
-        <Brand />
-        <p>Declare. Preflight. Act. Receipt.</p>
-        <a href="https://github.com/manazoid4/agent-nudge">
-          GitHub <ExternalLink size={14} />
-        </a>
-      </footer>
+      <PublicFooter />
     </main>
   );
 }
@@ -314,7 +302,7 @@ function NudgeSpecimen() {
     <div className="specimen">
       <div className="specimen-top">
         <span className="danger-dot" />
-        Pre-action hold <span>Codex · now</span>
+        Pre-action hold <span>Codex · recorded scenario</span>
       </div>
       <div className="specimen-body">
         <div className="score-ring">
@@ -324,8 +312,8 @@ function NudgeSpecimen() {
           <p className="mono-label">EXACT FILE CONFLICT</p>
           <h2>Claude is editing cache.ts</h2>
           <p>
-            Another active agent claimed the same file 8 minutes ago. Coordinate
-            before writing.
+            Another active agent claimed the same file. Coordinate before
+            writing.
           </p>
         </div>
       </div>
@@ -333,7 +321,7 @@ function NudgeSpecimen() {
         <FileCode2 />
         <div>
           <strong>src/lib/cache.ts</strong>
-          <span>Claude session receipt · source verified</span>
+          <span>Claude session receipt · source attached</span>
         </div>
         <ShieldCheck />
       </div>
@@ -344,9 +332,15 @@ function NudgeSpecimen() {
         <span>+10 evidence</span>
       </div>
       <div className="specimen-actions">
-        <button>Show evidence</button>
-        <button className="accept">
-          <Check size={15} /> Acknowledge
+        <button type="button" onClick={() => navigate("/demo/inbox")}> 
+          Show evidence
+        </button>
+        <button
+          type="button"
+          className="accept"
+          onClick={() => navigate("/demo/inbox")}
+        >
+          <Check size={15} /> Open acknowledgement
         </button>
       </div>
     </div>
@@ -354,7 +348,8 @@ function NudgeSpecimen() {
 }
 
 function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>(() => readView());
+  const [navOpen, setNavOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot>(sampleSnapshot);
   const [portfolio, setPortfolio] = useState<Portfolio>(samplePortfolio);
   const [selectedId, setSelectedId] = useState(snapshot.nudges[0]?.id ?? "");
@@ -375,8 +370,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
       const data = (await response.json()) as Snapshot;
       setSnapshot(data);
       if (portfolioResponse.ok) {
-        const portfolioData = (await portfolioResponse.json()) as Portfolio;
-        setPortfolio(portfolioData);
+        setPortfolio((await portfolioResponse.json()) as Portfolio);
       }
       setConnected(true);
     } catch {
@@ -390,12 +384,41 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
     return () => clearInterval(timer);
   }, [refresh]);
 
+  useEffect(() => {
+    const update = () => setView(readView());
+    addEventListener("popstate", update);
+    addEventListener("hashchange", update);
+    return () => {
+      removeEventListener("popstate", update);
+      removeEventListener("hashchange", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    const label = dashboardViews.find((item) => item.id === view)?.label;
+    document.title = `Agent Nudge — ${label ?? "Dashboard"}`;
+  }, [view]);
+
+  function selectView(next: View) {
+    setView(next);
+    setNavOpen(false);
+    if (isDesktop) {
+      location.hash = next;
+    } else {
+      history.pushState({}, "", `/demo/${next}`);
+      dispatchEvent(new PopStateEvent("popstate"));
+    }
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(".page h1")?.focus();
+    });
+  }
+
   async function runDemo() {
     setBusy(true);
     if (isPublicDemo) {
       setSnapshot(sampleSnapshot);
       setSelectedId("nudge-conflict");
-      setView("inbox");
+      selectView("inbox");
     } else {
       try {
         const suffix = Date.now().toString(36);
@@ -420,7 +443,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           },
         ];
         for (const session of sessions) {
-          await fetch(`${endpoint}/v1/sessions/check-in`, {
+          const response = await fetch(`${endpoint}/v1/sessions/check-in`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -430,8 +453,9 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
               cwd: "C:\\Projects\\agent-nudge",
             }),
           });
+          if (!response.ok) throw new Error("check-in failed");
         }
-        await fetch(`${endpoint}/v1/claims`, {
+        const claim = await fetch(`${endpoint}/v1/claims`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -441,6 +465,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
             leaseSeconds: 300,
           }),
         });
+        if (!claim.ok) throw new Error("claim failed");
         const synced = await fetch(`${endpoint}/v1/sync`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -452,7 +477,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
         });
         if (!synced.ok) throw new Error("live proof failed");
         await refresh();
-        setView("inbox");
+        selectView("inbox");
       } catch {
         setConnected(false);
       }
@@ -464,11 +489,22 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
     if (!selected) return;
     if (!isPublicDemo) {
       try {
-        await fetch(`${endpoint}/nudges/${selected.id}/action`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: actionName }),
-        });
+        const response =
+          actionName === "acknowledge"
+            ? await fetch(`${endpoint}/v1/nudges/${selected.id}/acknowledge`, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  projectId: selected.projectId,
+                  sessionId: selected.recipientSessionId,
+                }),
+              })
+            : await fetch(`${endpoint}/nudges/${selected.id}/action`, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ action: actionName }),
+              });
+        if (!response.ok) throw new Error("action failed");
         await refresh();
         return;
       } catch {
@@ -498,24 +534,24 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
 
   return (
     <div className="app-shell">
-      <aside className="rail">
+      <a className="skip-link" href="#main-workspace">
+        Skip to dashboard content
+      </a>
+      <aside
+        id="app-navigation"
+        className={`rail ${navOpen ? "mobile-open" : ""}`}
+      >
         <Brand compact />
-        <nav>
-          {(
-            [
-              ["overview", Gauge, "Live sync"],
-              ["portfolio", Layers3, "Context mesh"],
-              ["inbox", Inbox, "Nudge inbox"],
-              ["agents", Bot, "Live agents"],
-              ["timeline", Activity, "Timeline"],
-              ["rules", Radar, "Rules"],
-              ["settings", Settings, "Settings"],
-            ] as const
-          ).map(([id, Icon, label]) => (
+        <nav aria-label="Dashboard navigation">
+          {dashboardViews.map(({ id, icon: Icon, label }) => (
             <button
+              type="button"
               key={id}
               className={view === id ? "active" : ""}
-              onClick={() => setView(id)}
+              onClick={() => selectView(id)}
+              aria-label={label}
+              aria-current={view === id ? "page" : undefined}
+              title={label}
             >
               <Icon size={18} />
               <span>{label}</span>
@@ -530,7 +566,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
             <CircleDot size={15} />
             <span>
               {isPublicDemo
-                ? "Browser demo"
+                ? "Browser simulation"
                 : connected
                   ? "Local daemon"
                   : "Daemon offline"}
@@ -539,20 +575,28 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           <small>{window.agentNudge?.version ?? "v0.4.0"}</small>
         </div>
       </aside>
-      <div className="workspace">
+      <div className="workspace" id="main-workspace">
         <header className="app-topbar">
-          <button className="mobile-menu" aria-label="Open menu">
-            <Menu />
+          <button
+            type="button"
+            className="mobile-menu"
+            aria-label={navOpen ? "Close dashboard navigation" : "Open dashboard navigation"}
+            aria-expanded={navOpen}
+            aria-controls="app-navigation"
+            onClick={() => setNavOpen((current) => !current)}
+          >
+            {navOpen ? <X /> : <Menu />}
           </button>
           <div>
             <span>PROJECT</span>
-            <strong>Agent Nudge</strong>
+            <strong>{isPublicDemo ? "Recorded product scenario" : "Agent Nudge"}</strong>
           </div>
           <div className="top-actions">
             <span className="privacy">
-              <ShieldCheck size={15} /> Local only
+              <ShieldCheck size={15} /> {isPublicDemo ? "Fixture only" : "Local only"}
             </span>
             <button
+              type="button"
               className="button button-small"
               onClick={runDemo}
               disabled={busy}
@@ -563,7 +607,11 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           </div>
         </header>
         {view === "overview" && (
-          <Overview snapshot={snapshot} runDemo={runDemo} />
+          <Overview
+            snapshot={snapshot}
+            runDemo={runDemo}
+            openInbox={() => selectView("inbox")}
+          />
         )}
         {view === "portfolio" && <ContextMeshView portfolio={portfolio} />}
         {view === "inbox" && (
@@ -607,7 +655,7 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
       <div className="page-heading">
         <div>
           <p>Cross-repository assurance</p>
-          <h1>Context mesh</h1>
+          <h1 tabIndex={-1}>Context mesh</h1>
           <span>
             One quiet control surface for freshness, holds, receipts, and agent
             coverage across locally known projects.
@@ -625,27 +673,27 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
       <section className="metric-grid mesh-metrics">
         <Metric
           icon={Layers3}
-          value={String(portfolio.metrics.projects)}
+          value={portfolio.metrics.projects}
           label="known projects"
           detail="project-scoped by default"
         />
         <Metric
           icon={ShieldCheck}
-          value={String(portfolio.metrics.protectedProjects)}
+          value={portfolio.metrics.protectedProjects}
           label="protected"
           detail="current context + receipts"
         />
         <Metric
           icon={AlertOctagon}
-          value={String(portfolio.metrics.openHolds)}
+          value={portfolio.metrics.openHolds}
           label="open holds"
-          detail="stop before consequential action"
+          detail="review before consequential action"
         />
         <Metric
           icon={Check}
-          value={String(portfolio.metrics.acknowledged)}
-          label="verified acknowledgements"
-          detail="delivery is measured separately"
+          value={portfolio.metrics.acknowledged}
+          label="acknowledgements"
+          detail="delivery measured separately"
         />
       </section>
 
@@ -662,6 +710,7 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
             <div className="mesh-list" role="list">
               {portfolio.projects.map((project) => (
                 <button
+                  type="button"
                   key={project.projectId}
                   className={
                     selected?.projectId === project.projectId ? "active" : ""
@@ -673,8 +722,8 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
                     <strong>{project.projectName}</strong>
                     <span>
                       {project.activeAgents} agent
-                      {project.activeAgents === 1 ? "" : "s"} ·{" "}
-                      {project.receiptCount} receipts
+                      {project.activeAgents === 1 ? "" : "s"} · {project.receiptCount}{" "}
+                      receipts
                     </span>
                   </div>
                   <div className="mesh-score">
@@ -685,7 +734,6 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
               ))}
             </div>
           </section>
-
           {selected && <ProjectAssurance project={selected} />}
         </div>
       ) : (
@@ -693,8 +741,8 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
           <Layers3 size={28} />
           <h2>No projects in the local ledger yet</h2>
           <p>
-            Register an agent session or run the proof. Agent Nudge will never
-            discover or upload repositories behind your back.
+            Register an agent session or run the proof. Agent Nudge never
+            discovers or uploads repositories behind your back.
           </p>
         </section>
       )}
@@ -749,14 +797,13 @@ function ProjectAssurance({ project }: { project: PortfolioProject }) {
         <div>
           <strong>Hash-addressed pack</strong>
           <span>
-            Same ledger state produces the same digest; changed evidence creates
-            a new pack.
+            The same ledger state produces the same digest; changed evidence
+            produces a new pack.
           </span>
         </div>
       </div>
       <div className="mesh-freshness">
-        <Clock3 size={16} />
-        Latest activity {relative(project.latestActivityAt)}
+        <Clock3 size={16} /> Latest activity {relative(project.latestActivityAt)}
       </div>
     </section>
   );
@@ -769,23 +816,25 @@ function StateMark({ state }: { state: PortfolioProject["state"] }) {
 function Overview({
   snapshot,
   runDemo,
+  openInbox,
 }: {
   snapshot: Snapshot;
   runDemo: () => void;
+  openInbox: () => void;
 }) {
   return (
     <div className="page">
       <div className="page-heading">
         <div>
           <p>Live coordination</p>
-          <h1>Who is doing what—and can the next agent act?</h1>
+          <h1 tabIndex={-1}>Who is doing what—and can the next agent act?</h1>
           <span>
             Presence, current task intent, changed constraints, and receipts
             from one local production path.
           </span>
         </div>
-        <button className="button secondary" onClick={runDemo}>
-          <Sparkles size={16} /> Run live conflict proof
+        <button type="button" className="button secondary" onClick={runDemo}>
+          <Sparkles size={16} /> Run conflict proof
         </button>
       </div>
       <section className="live-loop" aria-label="Live Agent Bridge loop">
@@ -806,8 +855,8 @@ function Overview({
         <Metric
           icon={Bot}
           value={snapshot.metrics.activeAgents}
-          label="active agents"
-          detail="across this project"
+          label="active records"
+          detail="freshness correction planned for v0.5"
         />
         <Metric
           icon={BellRing}
@@ -819,8 +868,8 @@ function Overview({
         <Metric
           icon={ShieldCheck}
           value={snapshot.metrics.conflictsPrevented}
-          label="conflicts prevented"
-          detail="verified acknowledgements"
+          label="block receipts"
+          detail="not automatically claimed as prevention"
         />
         <Metric
           icon={Clock3}
@@ -836,7 +885,7 @@ function Overview({
               <h2>Consequential context</h2>
               <p>Ranked by action risk, not arrival time.</p>
             </div>
-            <button>
+            <button type="button" onClick={openInbox}>
               View inbox <ChevronRight size={15} />
             </button>
           </div>
@@ -847,14 +896,20 @@ function Overview({
         <div className="system-panel">
           <div className="section-head">
             <div>
-              <h2>Routing health</h2>
-              <p>Last 24 hours</p>
+              <h2>Routing snapshot</h2>
+              <p>Current local state</p>
             </div>
-            <span className="status-ok">Healthy</span>
+            <span className="status-ok">Inspectable</span>
           </div>
           <div className="routing-meter">
-            <div style={{ width: snapshot.nudges.length ? "100%" : "0%" }} />
-            <span>Deterministic local routing</span>
+            <div
+              style={{
+                width: snapshot.nudges.length
+                  ? `${Math.min(100, Math.max(12, snapshot.metrics.acknowledged * 25))}%`
+                  : "0%",
+              }}
+            />
+            <span>Acknowledged receipt coverage</span>
           </div>
           <dl>
             <div>
@@ -866,7 +921,7 @@ function Overview({
               <dd>{snapshot.events.length}</dd>
             </div>
             <div>
-              <dt>Delivered nudges</dt>
+              <dt>Non-queued nudges</dt>
               <dd>{snapshot.metrics.delivered}</dd>
             </div>
             <div>
@@ -906,7 +961,7 @@ function InboxView({
       <div className="page-heading">
         <div>
           <p>Nudge inbox</p>
-          <h1>Before the next action</h1>
+          <h1 tabIndex={-1}>Before the next action</h1>
           <span>
             {snapshot.nudges.length} source-backed context deltas for this
             project.
@@ -914,12 +969,14 @@ function InboxView({
         </div>
       </div>
       <div className="inbox-layout">
-        <section className="inbox-list">
+        <section className="inbox-list" aria-label="Nudges">
           {snapshot.nudges.map((item) => (
             <button
+              type="button"
               key={item.id}
               className={`inbox-item ${selected?.id === item.id ? "selected" : ""}`}
               onClick={() => setSelectedId(item.id)}
+              aria-pressed={selected?.id === item.id}
             >
               <ClassIcon value={item.deliveryClass} />
               <div>
@@ -932,20 +989,19 @@ function InboxView({
           ))}
         </section>
         {selected && (
-          <section className="inspector">
+          <section className="inspector" aria-live="polite">
             <div className="inspector-head">
               <ClassIcon value={selected.deliveryClass} />
               <div>
                 <span>
-                  {selected.deliveryClass.replace("_", " ")} · SCORE{" "}
-                  {selected.relevanceScore}
+                  {selected.deliveryClass.replace("_", " ")} · SCORE {selected.relevanceScore}
                 </span>
                 <h2>{selected.title}</h2>
               </div>
             </div>
             <p className="nudge-body">{selected.body.split("\n")[0]}</p>
             <div className="why-box">
-              <strong>Why this reached Codex now</strong>
+              <strong>Why this reached the recipient now</strong>
               <p>{selected.whyNow}</p>
               {selected.relevanceFactors.map((factor) => (
                 <div className="factor" key={factor.code}>
@@ -963,18 +1019,29 @@ function InboxView({
                 </strong>
                 <span>{selected.sourceRefs[0]?.label}</span>
               </div>
-              <button aria-label="Open source">
+              <button
+                type="button"
+                aria-label="Open source path in the Agent Nudge repository"
+                onClick={() => {
+                  const path = selected.sourceRefs[0]?.filePath;
+                  openExternal(path ? `${githubUrl}/blob/main/${path}` : githubUrl);
+                }}
+              >
                 <ExternalLink size={16} />
               </button>
             </div>
             <div className="inspector-actions">
-              <button onClick={() => action("dismiss")}>
+              <button type="button" onClick={() => action("dismiss")}>
                 <X size={16} /> Dismiss
               </button>
-              <button onClick={() => action("snooze")}>
-                <Clock3 size={16} /> Snooze
+              <button type="button" onClick={() => action("snooze")}>
+                <Clock3 size={16} /> Snooze 15m
               </button>
-              <button className="accept" onClick={() => action("acknowledge")}>
+              <button
+                type="button"
+                className="accept"
+                onClick={() => action("acknowledge")}
+              >
                 <Check size={16} /> Acknowledge
               </button>
             </div>
@@ -995,7 +1062,7 @@ function AgentsView({ snapshot }: { snapshot: Snapshot }) {
       <div className="page-heading">
         <div>
           <p>Live agents</p>
-          <h1>Who is doing what</h1>
+          <h1 tabIndex={-1}>Who is doing what</h1>
           <span>
             Declared task scope and recent activity—not hidden chain of thought.
           </span>
@@ -1025,23 +1092,25 @@ function AgentsView({ snapshot }: { snapshot: Snapshot }) {
     </div>
   );
 }
+
 function TimelineView({ snapshot }: { snapshot: Snapshot }) {
   return (
     <div className="page">
       <div className="page-heading">
         <div>
-          <p>Evidence timeline</p>
-          <h1>Why the system acted</h1>
+          <p>Nudge timeline</p>
+          <h1 tabIndex={-1}>What context was routed</h1>
           <span>
-            A local audit trail from source fact through recipient response.
+            This view currently shows nudge delivery records. Full protocol-event
+            reconstruction is tracked for v0.5.
           </span>
         </div>
       </div>
       <div className="timeline">
-        {snapshot.nudges.map((item, i) => (
+        {snapshot.nudges.map((item, index) => (
           <div key={item.id}>
             <span className="timeline-index">
-              {String(i + 1).padStart(2, "0")}
+              {String(index + 1).padStart(2, "0")}
             </span>
             <time>
               {new Date(item.createdAt).toLocaleTimeString([], {
@@ -1062,35 +1131,37 @@ function TimelineView({ snapshot }: { snapshot: Snapshot }) {
     </div>
   );
 }
+
 function RulesView() {
   const rows = [
-    ["Exact file claim conflict", "BLOCK", "140", "On"],
-    ["Changed decision + exact path", "ACT NOW", "100+", "On"],
-    ["Failed approach + task overlap", "NEXT BOUNDARY", "50+", "On"],
-    ["Low-signal documentation change", "DROP", "<30", "On"],
+    ["Exact file claim conflict", "BLOCK", "140", "Built-in"],
+    ["Changed decision + exact path", "ACT NOW", "100+", "Built-in"],
+    ["Failed approach + task overlap", "NEXT BOUNDARY", "50+", "Built-in"],
+    ["Low-signal documentation change", "DROP", "<30", "Built-in"],
   ];
   return (
     <div className="page">
       <div className="page-heading">
         <div>
-          <p>Deterministic rules</p>
-          <h1>Inspectable by design</h1>
+          <p>Current policy reference</p>
+          <h1 tabIndex={-1}>Deterministic and inspectable</h1>
           <span>
-            No embedding model or black-box classification is required.
+            This is a read-only reference for the current built-in policy. A
+            versioned policy editor belongs in a later release.
           </span>
         </div>
       </div>
-      <div className="rule-table">
-        <div className="rule-header">
-          <span>Rule</span>
-          <span>Delivery</span>
-          <span>Threshold</span>
-          <span>Status</span>
+      <div className="rule-table" role="table" aria-label="Current routing rules">
+        <div className="rule-header" role="row">
+          <span role="columnheader">Rule</span>
+          <span role="columnheader">Delivery</span>
+          <span role="columnheader">Threshold</span>
+          <span role="columnheader">Source</span>
         </div>
         {rows.map((row) => (
-          <div key={row[0]}>
-            {row.map((cell, i) => (
-              <span key={cell} className={i === 3 ? "status-ok" : ""}>
+          <div key={row[0]} role="row">
+            {row.map((cell, index) => (
+              <span key={cell} role="cell" className={index === 3 ? "status-ok" : ""}>
                 {cell}
               </span>
             ))}
@@ -1100,6 +1171,7 @@ function RulesView() {
     </div>
   );
 }
+
 function SettingsView({
   connected,
   isPublicDemo,
@@ -1107,13 +1179,21 @@ function SettingsView({
   connected: boolean;
   isPublicDemo: boolean;
 }) {
-  const [connectCommandCopied, setConnectCommandCopied] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [noiseBudget, setNoiseBudget] = useState(3);
+
+  async function copy(label: string, value: string) {
+    await copyText(value);
+    setCopied(label);
+    setTimeout(() => setCopied(""), 1600);
+  }
+
   return (
     <div className="page">
       <div className="page-heading">
         <div>
           <p>Settings</p>
-          <h1>Local control</h1>
+          <h1 tabIndex={-1}>Local control</h1>
           <span>Nothing is silently installed into agent configuration.</span>
         </div>
       </div>
@@ -1123,60 +1203,413 @@ function SettingsView({
           title="Local ledger"
           text={
             isPublicDemo
-              ? "Browser demo uses fixture data. The Windows app stores SQLite under your user profile."
+              ? "The browser uses public fixtures. The Windows app keeps its SQLite ledger under the user profile."
               : `${endpoint} · ${connected ? "connected" : "offline"}`
           }
-          action="Open data folder"
+          action={copied === "doctor" ? "Copied" : "Copy doctor command"}
+          onClick={() => copy("doctor", "agent-nudge doctor")}
         />
         <Setting
           icon={TerminalSquare}
           title="Agent integrations"
-          text="Claude Code, Codex, and OpenCode use project-scoped, reversible connectors. Dry-run is the default; --apply is always explicit."
-          action={connectCommandCopied ? "Copied" : "Copy connect command"}
-          onClick={() => {
-            void copyText("agent-nudge connect all --dry-run").then(() =>
-              setConnectCommandCopied(true),
-            );
-          }}
+          text="Claude Code, Codex, and OpenCode use project-scoped, reversible connectors. Dry-run is the default."
+          action={copied === "connect" ? "Copied" : "Copy dry-run command"}
+          onClick={() => copy("connect", "agent-nudge connect all --dry-run")}
         />
         <Setting
           icon={ShieldCheck}
-          title="Privacy defaults"
-          text="Secret redaction on. Raw prompts, replies, file contents, clipboard, and browser history remain off."
+          title="Privacy and security"
+          text="Raw prompts, replies, file contents, clipboard data, and browser history remain outside the default ledger."
           action="Review policy"
+          onClick={() =>
+            isDesktop
+              ? openExternal(`${githubUrl}/blob/main/SECURITY.md`)
+              : navigate("/security")
+          }
         />
         <Setting
           icon={Layers3}
           title="Noise budget"
-          text="Maximum three non-urgent nudges per session every ten minutes."
-          action="Reset defaults"
+          text={`Maximum ${noiseBudget} non-urgent nudges per session every ten minutes.`}
+          action={noiseBudget === 3 ? "Default active" : "Reset default"}
+          onClick={() => setNoiseBudget(3)}
+        />
+        <Setting
+          icon={RotateCcw}
+          title="Recovery roadmap"
+          text="Crash recovery, stale-lock handling, and sole-writer enforcement are the active v0.5 reliability work."
+          action="Open issue"
+          onClick={() => openExternal(`${githubUrl}/issues/6`)}
         />
       </div>
     </div>
   );
 }
 
-async function copyText(value: string) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return;
-    }
-  } catch {
-    // Fall back to the synchronous copy path below.
-  }
-  const input = document.createElement("textarea");
-  input.value = value;
-  input.setAttribute("readonly", "");
-  input.style.position = "fixed";
-  input.style.opacity = "0";
-  document.body.appendChild(input);
-  input.select();
-  document.execCommand("copy");
-  input.remove();
+function DownloadPage() {
+  return (
+    <PublicPage
+      eyebrow="WINDOWS DELIVERY"
+      title="Install locally. Verify what you run."
+      lede="Agent Nudge v0.4 has verified Windows installer and portable build receipts. Public release-asset automation is being completed as part of v0.5, so this page never pretends an unavailable binary is ready."
+    >
+      <div className="public-grid two-column">
+        <article className="public-card featured-card">
+          <Download />
+          <h2>GitHub Releases</h2>
+          <p>
+            Use the releases page for published installers, portable builds,
+            checksums, release notes, and future signed artifacts.
+          </p>
+          <a className="button" href={releasesUrl}>
+            Open GitHub Releases <ExternalLink size={16} />
+          </a>
+        </article>
+        <article className="public-card">
+          <TerminalSquare />
+          <h2>Build from source</h2>
+          <p>
+            Clone the repository on Windows, install the locked dependencies,
+            run all checks, and package the installer locally.
+          </p>
+          <pre>
+            <code>{`npm ci\nnpm run typecheck\nnpm run test\nnpm run package:win`}</code>
+          </pre>
+        </article>
+      </div>
+      <section className="public-section">
+        <h2>First connection</h2>
+        <ol className="numbered-steps">
+          <li>Run <code>agent-nudge doctor</code>.</li>
+          <li>Preview connector changes with <code>agent-nudge connect all --dry-run</code>.</li>
+          <li>Review every target and backup location.</li>
+          <li>Apply explicitly with <code>agent-nudge connect all --apply</code>.</li>
+          <li>Run the two-agent proof and inspect the first receipt.</li>
+        </ol>
+      </section>
+      <Callout>
+        Current v0.4 limitations include unsigned Windows binaries, fail-open
+        hooks while the daemon is unavailable, and incomplete hard-termination
+        recovery. They are documented rather than hidden.
+      </Callout>
+    </PublicPage>
+  );
 }
 
-function Metric({ icon: Icon, value, label, detail, tone = "" }: any) {
+function DocsPage() {
+  return (
+    <PublicPage
+      eyebrow="DOCUMENTATION"
+      title="Declare. Preflight. Act. Receipt."
+      lede="The shortest useful path through Agent Nudge, from a clean repository to a source-backed pre-action decision."
+    >
+      <div className="public-grid three-column">
+        <article className="public-card">
+          <BookOpen />
+          <h2>1. Declare intent</h2>
+          <p>An agent checks in with project, task, paths, tags, and heartbeat.</p>
+        </article>
+        <article className="public-card">
+          <AlertOctagon />
+          <h2>2. Preflight</h2>
+          <p>The local daemon returns HOLD, REVIEW, or CLEAR with a digest.</p>
+        </article>
+        <article className="public-card">
+          <ShieldCheck />
+          <h2>3. Record outcome</h2>
+          <p>The recipient acknowledges, replans, releases, or disputes context.</p>
+        </article>
+      </div>
+      <section className="public-section split-section">
+        <div>
+          <h2>Connector commands</h2>
+          <pre>
+            <code>{`agent-nudge doctor\nagent-nudge connect all --dry-run\nagent-nudge connect all --apply\nagent-nudge disconnect all --dry-run`}</code>
+          </pre>
+        </div>
+        <div>
+          <h2>Protocol boundaries</h2>
+          <ul className="plain-list">
+            <li>No transcript store.</li>
+            <li>Project isolation by default.</li>
+            <li>Explicit connector mutation.</li>
+            <li>Evidence references and expiry.</li>
+            <li>Delivery does not equal model knowledge.</li>
+          </ul>
+        </div>
+      </section>
+      <div className="page-actions">
+        <a className="button" href={`${githubUrl}/blob/main/README.md`}>
+          Read repository guide <ExternalLink size={16} />
+        </a>
+        <RouteLink className="button secondary" to="/demo/overview">
+          Explore dashboard
+        </RouteLink>
+      </div>
+    </PublicPage>
+  );
+}
+
+function SecurityPage() {
+  return (
+    <PublicPage
+      eyebrow="SECURITY"
+      title="Local-first is a boundary, not a slogan."
+      lede="Agent Nudge minimises captured data, binds its service to loopback, and makes provider changes reversible. The remaining risks are stated plainly."
+    >
+      <div className="public-grid three-column">
+        <article className="public-card">
+          <Database />
+          <h2>Data minimisation</h2>
+          <p>Structured facts, paths, source references, claims, and receipts.</p>
+        </article>
+        <article className="public-card">
+          <LockKeyhole />
+          <h2>Local control plane</h2>
+          <p>The daemon listens on 127.0.0.1 and does not require a cloud account.</p>
+        </article>
+        <article className="public-card">
+          <RotateCcw />
+          <h2>Reversible connectors</h2>
+          <p>Dry-run, owned fragments, external backups, drift refusal, rollback.</p>
+        </article>
+      </div>
+      <section className="public-section">
+        <h2>Known limitations and active work</h2>
+        <ul className="plain-list status-list">
+          <li>
+            <strong>Local API authentication:</strong> required before stronger
+            multi-process trust claims.
+          </li>
+          <li>
+            <strong>Single writer:</strong> the daemon must become the sole SQLite
+            writer.
+          </li>
+          <li>
+            <strong>Crash recovery:</strong> incomplete connector operations need
+            deterministic startup recovery.
+          </li>
+          <li>
+            <strong>Unsigned builds:</strong> current Windows builds may trigger
+            SmartScreen.
+          </li>
+          <li>
+            <strong>Coverage:</strong> provider hooks cannot stop hosted, disabled,
+            bypassed, or otherwise uncovered actions.
+          </li>
+        </ul>
+      </section>
+      <Callout>
+        Report vulnerabilities privately through the repository security policy.
+        Do not include secrets, private source code, or customer data in a public
+        issue.
+      </Callout>
+      <div className="page-actions">
+        <a className="button" href={`${githubUrl}/security`}>
+          Security policy <ExternalLink size={16} />
+        </a>
+        <a className="button secondary" href={`${githubUrl}/issues/6`}>
+          Reliability issue <ExternalLink size={16} />
+        </a>
+      </div>
+    </PublicPage>
+  );
+}
+
+function PricingPage() {
+  const plans = [
+    {
+      name: "Community",
+      price: "£0",
+      text: "Local daemon, desktop inbox, context packs, CLI, MCP, exports, and user-owned adapters.",
+    },
+    {
+      name: "Pro hypothesis",
+      price: "£19/mo",
+      text: "Encrypted personal sync, longer receipt history, cross-device rules, and portfolio ROI.",
+    },
+    {
+      name: "Team hypothesis",
+      price: "£299/mo",
+      text: "Shared policy, managed connectors, team context mesh, audit exports, and ten seats.",
+    },
+    {
+      name: "Business hypothesis",
+      price: "£999/mo",
+      text: "Retention policy, advanced routing, deployment controls, and priority support.",
+    },
+  ];
+  return (
+    <PublicPage
+      eyebrow="PACKAGING"
+      title="Pay for coordination, not stored noise."
+      lede="The Community product remains useful and private. Paid tiers remain hypotheses until design-partner evidence validates the jobs and willingness to pay."
+    >
+      <div className="public-grid pricing-grid">
+        {plans.map((plan) => (
+          <article className="public-card price-card" key={plan.name}>
+            <span>{plan.name}</span>
+            <strong>{plan.price}</strong>
+            <p>{plan.text}</p>
+          </article>
+        ))}
+      </div>
+      <Callout>
+        No billing is implemented in v0.4. Pricing is intentionally labelled as a
+        hypothesis except for the free local Community core.
+      </Callout>
+      <div className="page-actions">
+        <a
+          className="button"
+          href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20design%20partner"
+        >
+          Discuss a design partnership <ArrowRight size={16} />
+        </a>
+      </div>
+    </PublicPage>
+  );
+}
+
+function ChangelogPage() {
+  return (
+    <PublicPage
+      eyebrow="CHANGELOG"
+      title="Built in receipts, not release theatre."
+      lede="A concise public history of what is implemented, what is verified, and what remains unfinished."
+    >
+      <div className="changelog-list">
+        <article>
+          <time>20 July 2026</time>
+          <div>
+            <span>v0.4.0</span>
+            <h2>Live Connect</h2>
+            <p>
+              Reversible project connectors for Claude Code, Codex, and OpenCode;
+              local preflight and receipt hooks; offline outbox; Windows packaging;
+              expanded tests.
+            </p>
+          </div>
+        </article>
+        <article>
+          <time>v0.5 target</time>
+          <div>
+            <span>In progress</span>
+            <h2>Reliability, trust, and adoption</h2>
+            <p>
+              Sole-writer ledger, crash recovery, local authentication, corrected
+              outcome metrics, routed public site, installation funnel, and Shadow
+              Mode foundations.
+            </p>
+          </div>
+        </article>
+      </div>
+      <div className="page-actions">
+        <a className="button" href={`${githubUrl}/commits/main`}>
+          Inspect commits <ExternalLink size={16} />
+        </a>
+        <a className="button secondary" href={`${githubUrl}/issues`}>
+          View roadmap issues <ExternalLink size={16} />
+        </a>
+      </div>
+    </PublicPage>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <PublicPage
+      eyebrow="404"
+      title="That route is not in the ledger."
+      lede="Use the product routes below rather than falling back to an empty single-page shell."
+    >
+      <div className="page-actions">
+        <RouteLink className="button" to="/">
+          Return home
+        </RouteLink>
+        <RouteLink className="button secondary" to="/docs">
+          Open documentation
+        </RouteLink>
+      </div>
+    </PublicPage>
+  );
+}
+
+function PublicPage({
+  eyebrow,
+  title,
+  lede,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  lede: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="landing public-route">
+      <PublicHeader />
+      <section className="public-hero shell">
+        <p className="section-signal">{eyebrow}</p>
+        <h1>{title}</h1>
+        <p>{lede}</p>
+      </section>
+      <div className="shell public-content">{children}</div>
+      <PublicFooter />
+    </main>
+  );
+}
+
+function PublicHeader() {
+  return (
+    <header className="site-nav shell">
+      <Brand />
+      <nav aria-label="Main navigation">
+        <RouteLink to="/docs">Docs</RouteLink>
+        <RouteLink to="/security">Security</RouteLink>
+        <RouteLink to="/pricing">Pricing</RouteLink>
+        <RouteLink to="/changelog">Changelog</RouteLink>
+      </nav>
+      <RouteLink className="button button-small" to="/download">
+        Download <ArrowRight size={16} />
+      </RouteLink>
+    </header>
+  );
+}
+
+function PublicFooter() {
+  return (
+    <footer className="shell footer">
+      <Brand />
+      <p>Declare. Preflight. Act. Receipt.</p>
+      <a href={githubUrl}>
+        GitHub <ExternalLink size={14} />
+      </a>
+    </footer>
+  );
+}
+
+function Callout({ children }: { children: ReactNode }) {
+  return (
+    <aside className="public-callout">
+      <ShieldCheck />
+      <p>{children}</p>
+    </aside>
+  );
+}
+
+function Metric({
+  icon: Icon,
+  value,
+  label,
+  detail,
+  tone = "",
+}: {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+  detail: string;
+  tone?: string;
+}) {
   return (
     <div className={`metric ${tone}`}>
       <Icon />
@@ -1186,6 +1619,7 @@ function Metric({ icon: Icon, value, label, detail, tone = "" }: any) {
     </div>
   );
 }
+
 function NudgeRow({ item }: { item: NudgeItem }) {
   return (
     <div className="nudge-row">
@@ -1202,6 +1636,7 @@ function NudgeRow({ item }: { item: NudgeItem }) {
     </div>
   );
 }
+
 function ClassIcon({ value }: { value: string }) {
   return (
     <span className={`class-icon ${value.toLowerCase()}`}>
@@ -1215,7 +1650,20 @@ function ClassIcon({ value }: { value: string }) {
     </span>
   );
 }
-function Setting({ icon: Icon, title, text, action, onClick }: any) {
+
+function Setting({
+  icon: Icon,
+  title,
+  text,
+  action,
+  onClick,
+}: {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+  action: string;
+  onClick: () => void;
+}) {
   return (
     <article>
       <Icon />
@@ -1223,18 +1671,27 @@ function Setting({ icon: Icon, title, text, action, onClick }: any) {
         <h2>{title}</h2>
         <p>{text}</p>
       </div>
-      <button onClick={onClick} disabled={!onClick}>
+      <button type="button" onClick={onClick}>
         {action}
         <ChevronRight size={15} />
       </button>
     </article>
   );
 }
+
 function Brand({ compact = false }: { compact?: boolean }) {
+  const href = isDesktop ? "#overview" : "/";
   return (
     <a
       className={`brand ${compact ? "compact" : ""}`}
-      href={isDesktop ? "#" : "/"}
+      href={href}
+      aria-label="Agent Nudge home"
+      onClick={(event) => {
+        if (isDesktop) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate("/");
+      }}
     >
       <span>
         N<span>↗</span>
@@ -1247,6 +1704,71 @@ function Brand({ compact = false }: { compact?: boolean }) {
     </a>
   );
 }
+
+function RouteLink({
+  to,
+  className,
+  children,
+}: {
+  to: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={to}
+      className={className}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate(to);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+function navigate(path: string) {
+  if (isDesktop) return;
+  history.pushState({}, "", path);
+  dispatchEvent(new PopStateEvent("popstate"));
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function readView(): View {
+  const candidate = isDesktop
+    ? location.hash.replace(/^#/, "")
+    : location.pathname.split("/").filter(Boolean)[1];
+  return dashboardViews.some((item) => item.id === candidate)
+    ? (candidate as View)
+    : "overview";
+}
+
+function openExternal(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function copyText(value: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+  } catch {
+    // Fall back to a synchronous copy path.
+  }
+  const input = document.createElement("textarea");
+  input.value = value;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand("copy");
+  input.remove();
+}
+
 function relative(date?: string) {
   if (!date) return "not recorded";
   const minutes = Math.max(
