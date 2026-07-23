@@ -196,7 +196,8 @@ export class NudgeDatabase {
     };
     this.put("sessions", session);
     this.appendChange(input.projectId, "session", session.id, "check-in", at);
-    if (input.task) this.updateTask(input.projectId, input.sessionId, input.task, now);
+    if (input.task)
+      this.updateTask(input.projectId, input.sessionId, input.task, now);
     return session;
   }
 
@@ -214,7 +215,13 @@ export class NudgeDatabase {
       activeTask: task ?? current.activeTask,
     };
     this.put("sessions", session);
-    this.appendChange(projectId, "session", sessionId, "heartbeat", now.toISOString());
+    this.appendChange(
+      projectId,
+      "session",
+      sessionId,
+      "heartbeat",
+      now.toISOString(),
+    );
     if (task) this.updateTask(projectId, sessionId, task, now);
     return session;
   }
@@ -237,7 +244,13 @@ export class NudgeDatabase {
       updatedAt: now.toISOString(),
     };
     this.put("tasks", { ...record, createdAt: record.updatedAt });
-    this.appendChange(projectId, "task", record.id, "updated", record.updatedAt);
+    this.appendChange(
+      projectId,
+      "task",
+      record.id,
+      "updated",
+      record.updatedAt,
+    );
     return record;
   }
 
@@ -283,14 +296,22 @@ export class NudgeDatabase {
 
   recordAndFanOutFact(fact: ContextFact, now = new Date()) {
     const existing = this.get<ContextFact>("facts", fact.id);
-    if (existing) return { fact: existing, nudges: [] as Nudge[], duplicate: true };
+    if (existing)
+      return { fact: existing, nudges: [] as Nudge[], duplicate: true };
     this.requireSession(fact.projectId, fact.authorSessionId);
     this.put("facts", fact);
-    this.appendChange(fact.projectId, "fact", fact.id, "published", fact.createdAt);
+    this.appendChange(
+      fact.projectId,
+      "fact",
+      fact.id,
+      "published",
+      fact.createdAt,
+    );
     const sessions = this.list<AgentSession>("sessions", fact.projectId);
     const nudges: Nudge[] = [];
     for (const recipient of sessions) {
-      if (recipient.id === fact.authorSessionId || recipient.status === "ended") continue;
+      if (recipient.id === fact.authorSessionId || recipient.status === "ended")
+        continue;
       const decision = decideNudge(fact, recipient, { now });
       if (decision.suppressed) continue;
       const nudge = compileNudge(fact, recipient, decision, now);
@@ -299,7 +320,13 @@ export class NudgeDatabase {
       );
       if (existingNudge) continue;
       this.put("nudges", nudge);
-      this.appendChange(fact.projectId, "nudge", nudge.id, "queued", nudge.createdAt);
+      this.appendChange(
+        fact.projectId,
+        "nudge",
+        nudge.id,
+        "queued",
+        nudge.createdAt,
+      );
       nudges.push(nudge);
     }
     return { fact, nudges, duplicate: false };
@@ -362,7 +389,13 @@ export class NudgeDatabase {
         ).toISOString(),
       };
       this.put("claims", renewed);
-      this.appendChange(input.projectId, "claim", renewed.id, "renewed", now.toISOString());
+      this.appendChange(
+        input.projectId,
+        "claim",
+        renewed.id,
+        "renewed",
+        now.toISOString(),
+      );
       return { acquired: true as const, claim: renewed, renewed: true };
     }
     const factId = `fact-${randomUUID()}`;
@@ -412,7 +445,13 @@ export class NudgeDatabase {
       extensionMetadata: { claimId: claim.id },
     };
     this.put("claims", claim);
-    this.appendChange(input.projectId, "claim", claim.id, "acquired", claim.acquiredAt);
+    this.appendChange(
+      input.projectId,
+      "claim",
+      claim.id,
+      "acquired",
+      claim.acquiredAt,
+    );
     const routed = this.recordAndFanOutFact(fact, now);
     return { acquired: true as const, claim, renewed: false, routed };
   }
@@ -429,7 +468,13 @@ export class NudgeDatabase {
       releasedAt: now.toISOString(),
     };
     this.put("claims", released);
-    this.appendChange(input.projectId, "claim", claim.id, "released", released.releasedAt);
+    this.appendChange(
+      input.projectId,
+      "claim",
+      claim.id,
+      "released",
+      released.releasedAt,
+    );
     this.supersedeClaimNudges(input.projectId, claim.factId, now);
     const releaseFact: ContextFact = {
       id: `fact-${randomUUID()}`,
@@ -472,17 +517,16 @@ export class NudgeDatabase {
     paths: string[] = [],
     now = new Date(),
   ) {
-    const keys = new Set(paths.map((path) => normalizeClaimPath(path).toLowerCase()));
+    const keys = new Set(
+      paths.map((path) => normalizeClaimPath(path).toLowerCase()),
+    );
     const claims = this.activeClaims(projectId, now).filter(
       (claim) =>
         claim.sessionId === sessionId &&
         (keys.size === 0 || keys.has(claim.pathKey)),
     );
     return claims.map((claim) =>
-      this.releaseClaim(
-        { projectId, sessionId, claimId: claim.id },
-        now,
-      ),
+      this.releaseClaim({ projectId, sessionId, claimId: claim.id }, now),
     );
   }
 
@@ -508,7 +552,13 @@ export class NudgeDatabase {
       action: "acknowledged",
       at: updated.acknowledgedAt,
     });
-    this.appendChange(input.projectId, "nudge", updated.id, "acknowledged", updated.acknowledgedAt);
+    this.appendChange(
+      input.projectId,
+      "nudge",
+      updated.id,
+      "acknowledged",
+      updated.acknowledgedAt,
+    );
     return updated;
   }
 
@@ -574,9 +624,11 @@ export class NudgeDatabase {
       facts,
       nudges,
       metrics: {
-        activeAgents: sessions.filter((item) => item.status === "active").length,
+        activeAgents: sessions.filter((item) => item.status === "active")
+          .length,
         openNudges: nudges.filter((item) => item.state === "queued").length,
-        acknowledged: nudges.filter((item) => item.state === "acknowledged").length,
+        acknowledged: nudges.filter((item) => item.state === "acknowledged")
+          .length,
         conflictsPrevented: nudges.filter(
           (item) => item.deliveryClass === "BLOCK" && item.state !== "queued",
         ).length,
@@ -626,11 +678,7 @@ export class NudgeDatabase {
     this.db.close();
   }
 
-  private supersedeClaimNudges(
-    projectId: string,
-    factId: string,
-    now: Date,
-  ) {
+  private supersedeClaimNudges(projectId: string, factId: string, now: Date) {
     for (const nudge of this.list<Nudge>("nudges", projectId)) {
       if (
         nudge.factId === factId &&

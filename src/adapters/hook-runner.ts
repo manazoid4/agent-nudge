@@ -38,7 +38,9 @@ export async function runProviderHook(input: HookRunnerInput) {
     projectId: input.projectId,
     projectName: input.projectName,
     cwd: input.projectRoot,
-    toolClass: String(event.payload.toolClass ?? event.payload.eventName ?? "unknown"),
+    toolClass: String(
+      event.payload.toolClass ?? event.payload.eventName ?? "unknown",
+    ),
     paths: event.paths,
   };
 
