@@ -18,8 +18,14 @@ import {
   compareInstructionProvenance,
   scanInstructionProvenance,
 } from "../../src/core/instruction-provenance.js";
-import { assessMergeRisk, classifyPathRisk } from "../../src/core/merge-risk.js";
-import { assessTaskStart, type AssuranceTask } from "../../src/core/task-graph.js";
+import {
+  assessMergeRisk,
+  classifyPathRisk,
+} from "../../src/core/merge-risk.js";
+import {
+  assessTaskStart,
+  type AssuranceTask,
+} from "../../src/core/task-graph.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -99,17 +105,14 @@ describe("instruction provenance", () => {
     temporaryDirectories.push(root);
     mkdirSync(join(root, ".opencode", "skills"), { recursive: true });
     writeFileSync(join(root, "AGENTS.md"), "First instruction");
-    writeFileSync(join(root, ".opencode", "skills", "review.md"), "Review skill");
+    writeFileSync(
+      join(root, ".opencode", "skills", "review.md"),
+      "Review skill",
+    );
 
-    const before = scanInstructionProvenance(
-      root,
-      "2026-07-23T12:00:00.000Z",
-    );
+    const before = scanInstructionProvenance(root, "2026-07-23T12:00:00.000Z");
     writeFileSync(join(root, "AGENTS.md"), "Changed instruction");
-    const after = scanInstructionProvenance(
-      root,
-      "2026-07-23T12:01:00.000Z",
-    );
+    const after = scanInstructionProvenance(root, "2026-07-23T12:01:00.000Z");
     const drift = compareInstructionProvenance(before, after);
 
     expect(before.scannedFileCount).toBe(2);

@@ -38,7 +38,12 @@ const exactCandidates = [
   ["AGENTS.md", "shared", "repository", "instruction"],
   ["CLAUDE.md", "claude-code", "repository", "instruction"],
   ["GEMINI.md", "gemini-cli", "repository", "instruction"],
-  [".github/copilot-instructions.md", "github-copilot", "repository", "instruction"],
+  [
+    ".github/copilot-instructions.md",
+    "github-copilot",
+    "repository",
+    "instruction",
+  ],
   [".opencode/config.json", "opencode", "provider", "config"],
   ["opencode.json", "opencode", "repository", "config"],
   [".cursor/rules", "cursor", "provider", "rule"],
@@ -87,7 +92,9 @@ export function scanInstructionProvenance(
       return;
     }
     if (stat.size > maxFileBytes) {
-      warnings.push(`${toRelative(root, absolutePath)} exceeds the 1 MiB provenance limit.`);
+      warnings.push(
+        `${toRelative(root, absolutePath)} exceeds the 1 MiB provenance limit.`,
+      );
       skippedFileCount += 1;
       return;
     }
@@ -109,7 +116,9 @@ export function scanInstructionProvenance(
     if (!isInside(root, absolutePath) || !existsSync(absolutePath)) continue;
     const stat = lstatSync(absolutePath);
     if (stat.isDirectory()) {
-      scanDirectory(absolutePath, (file) => addFile(file, provider, scope, kind));
+      scanDirectory(absolutePath, (file) =>
+        addFile(file, provider, scope, kind),
+      );
     } else {
       addFile(absolutePath, provider, scope, kind);
     }

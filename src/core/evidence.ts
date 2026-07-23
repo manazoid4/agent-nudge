@@ -100,7 +100,10 @@ function evidenceKind(
 ): StructuredEvidence["kind"] | undefined {
   const providerEvent = String(event.extensionMetadata.providerEvent ?? "");
   const toolClass = String(event.payload.toolClass ?? "").toLowerCase();
-  if (providerEvent.includes("lsp") || event.payload.diagnosticCount !== undefined)
+  if (
+    providerEvent.includes("lsp") ||
+    event.payload.diagnosticCount !== undefined
+  )
     return "lsp-diagnostic";
   if (providerEvent === "file.edited" || event.eventType === "file.changed")
     return "file-change";
@@ -136,9 +139,7 @@ function evidenceSummary(
   );
 }
 
-function provenanceFor(
-  kind: StructuredEvidence["kind"],
-): EvidenceProvenance {
+function provenanceFor(kind: StructuredEvidence["kind"]): EvidenceProvenance {
   if (kind === "test-run" || kind === "lint" || kind === "typecheck")
     return "test-verified";
   if (kind === "ci-check") return "signed-remote";

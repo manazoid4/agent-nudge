@@ -240,9 +240,7 @@ function normalizeEventName(value: unknown): string {
   return safeEvents.has(eventName) ? eventName : "session.updated";
 }
 
-function mapOpenCodeEventType(
-  name: string,
-): AgentEvent["eventType"] {
+function mapOpenCodeEventType(name: string): AgentEvent["eventType"] {
   if (name === "session.created") return "session.started";
   if (name === "session.deleted") return "session.ended";
   if (name === "tool.execute.before" || name === "permission.asked")
@@ -263,13 +261,14 @@ function categoryFor(name: string): OpenCodeAssuranceSignal["category"] {
   if (name === "tool.execute.after" || name === "command.executed")
     return "receipt";
   if (name.startsWith("permission.")) return "permission";
-  if (name.startsWith("lsp.") || name.startsWith("file."))
-    return "evidence";
+  if (name.startsWith("lsp.") || name.startsWith("file.")) return "evidence";
   if (name === "todo.updated") return "task";
   return "installation";
 }
 
-function compactSignal(signal: OpenCodeAssuranceSignal): Record<string, unknown> {
+function compactSignal(
+  signal: OpenCodeAssuranceSignal,
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(signal).filter(([, value]) => value !== undefined),
   );

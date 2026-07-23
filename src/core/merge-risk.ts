@@ -35,7 +35,10 @@ export const mergeRiskReportSchema = z.object({
 export type PathRisk = z.infer<typeof pathRiskSchema>;
 export type MergeRiskReport = z.infer<typeof mergeRiskReportSchema>;
 
-export function classifyPathRisk(leftPath: string, rightPath: string): PathRisk {
+export function classifyPathRisk(
+  leftPath: string,
+  rightPath: string,
+): PathRisk {
   const left = normalizePath(leftPath);
   const right = normalizePath(rightPath);
   if (left === right) {
@@ -120,7 +123,14 @@ function simulateMergeTree(
   }
   const result = spawnSync(
     "git",
-    ["-C", resolve(repositoryRoot), "merge-tree", "--write-tree", leftRef, rightRef],
+    [
+      "-C",
+      resolve(repositoryRoot),
+      "merge-tree",
+      "--write-tree",
+      leftRef,
+      rightRef,
+    ],
     {
       encoding: "utf8",
       timeout: 5000,
@@ -134,13 +144,16 @@ function simulateMergeTree(
       supported: false,
       conflictDetected: false,
       exitCode: result.status,
-      summary: "Git merge-tree was unavailable or could not inspect the repository.",
+      summary:
+        "Git merge-tree was unavailable or could not inspect the repository.",
     };
   }
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   const conflictDetected =
     result.status === 1 ||
-    /CONFLICT|Auto-merging|changed in both|add\/add|modify\/delete/i.test(output);
+    /CONFLICT|Auto-merging|changed in both|add\/add|modify\/delete/i.test(
+      output,
+    );
   return {
     attempted: true,
     supported: true,
@@ -164,7 +177,9 @@ function isAncestor(parent: string, child: string) {
 
 function specialKind(path: string): PathRisk["kind"] | undefined {
   const name = path.split("/").at(-1) ?? path;
-  if (/^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/.test(name))
+  if (
+    /^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/.test(name)
+  )
     return "lockfile";
   if (/(^|\/)(migrations?|schema)(\/|\.|$)/.test(path)) return "migration";
   if (/(^|\/)(dist|build|generated|codegen)(\/|$)/.test(path))

@@ -196,9 +196,11 @@ export function effectiveCapability(
 ): CapabilityLevel {
   const declared = manifest.events[event] ?? "unsupported";
   if (declared === "unsupported") return declared;
-  if (!context.installed || !context.enabled || context.drifted) return "unsupported";
+  if (!context.installed || !context.enabled || context.drifted)
+    return "unsupported";
   if (declared === "enforced") {
-    if (!context.trusted || context.daemonAvailable === false) return "advisory";
+    if (!context.trusted || context.daemonAvailable === false)
+      return "advisory";
   }
   return declared;
 }
