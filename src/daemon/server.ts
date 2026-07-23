@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import Fastify, { type FastifyReply } from "fastify";
 import { z } from "zod";
+import { listProviderCapabilities } from "../core/capabilities.js";
 import {
   buildAllScenarios,
   buildScenario,
   type DemoScenario,
 } from "../core/demo.js";
+import {
+  evidenceFromAgentEvent,
+  type StructuredEvidence,
+} from "../core/evidence.js";
 import {
   acknowledgeRequestSchema,
   activeTaskSchema,
@@ -25,6 +30,7 @@ import { sanitizeObject } from "../core/redaction.js";
 import { NudgeDatabase } from "../storage/database.js";
 
 export const DEFAULT_PORT = 47831;
+const evidenceStorageKind = "evidence" as Parameters<NudgeDatabase["put"]>[0];
 
 export function createServer(database: NudgeDatabase) {
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
@@ -49,8 +55,29 @@ export function createServer(database: NudgeDatabase) {
     return database.contextPack(query.projectId, query.recipientSessionId);
   });
   app.get("/portfolio", async () => database.portfolioSummary());
-  app.get("/export", async () => database.exportAll());
+  app.get("/export", async () => ({
+    ...database.exportAll(),
+    evidence: database.list<StructuredEvidence>(evidenceStorageKind),
+  }));
   app.get("/purge/preview", async () => database.purgePreview());
+  app.get("/v1/capabilities", async () => ({
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    providers: listProviderCapabilities(),
+  }));
+  app.get("/v1/evidence", async (request, reply) => {
+    const projectId = (request.query as { projectId?: string }).projectId;
+    if (!projectId)
+      return reply.code(400).send({ error: "project_id_required" });
+    return {
+      schemaVersion: 1,
+      projectId,
+      evidence: database.list<StructuredEvidence>(
+        evidenceStorageKind,
+        projectId,
+      ),
+    };
+  });
 
   app.post("/v1/sessions/check-in", async (request, reply) => {
     const parsed = checkInSchema.safeParse(sanitizeObject(request.body));
@@ -282,7 +309,17 @@ export function createServer(database: NudgeDatabase) {
         .code(400)
         .send({ error: "invalid_event", details: parsed.error.flatten() });
     const result = database.putEvent(parsed.data);
-    return reply.code(result.inserted ? 201 : 200).send(result);
+    const evidence = result.inserted
+      ? evidenceFromAgentEvent(parsed.data)
+      : undefined;
+    if (evidence)
+      database.put(evidenceStorageKind, {
+        ...evidence,
+        createdAt: evidence.observedAt,
+      });
+    return reply
+      .code(result.inserted ? 201 : 200)
+      .send({ ...result, evidence });
   });
 
   app.post("/facts", async (request, reply) => {

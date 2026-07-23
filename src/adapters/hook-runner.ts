@@ -38,7 +38,9 @@ export async function runProviderHook(input: HookRunnerInput) {
     projectId: input.projectId,
     projectName: input.projectName,
     cwd: input.projectRoot,
-    toolClass: String(event.payload.toolClass ?? "unknown"),
+    toolClass: String(
+      event.payload.toolClass ?? event.payload.eventName ?? "unknown",
+    ),
     paths: event.paths,
   };
 
@@ -95,14 +97,35 @@ export async function runProviderHook(input: HookRunnerInput) {
   };
 }
 
-function phaseFromPayload(payload: HookPayload): Exclude<HookPhase, "auto"> {
+export function phaseFromPayload(
+  payload: HookPayload,
+): Exclude<HookPhase, "auto"> {
   const name = String(
-    payload.hook_event_name ?? payload.event ?? "",
+    payload.hook_event_name ?? payload.event ?? payload.type ?? "",
   ).toLowerCase();
-  if (name.includes("failure") || name.includes("failed")) return "failure";
-  if (name.includes("post") || name.includes("after")) return "post";
-  if (name.includes("session")) return "session";
-  return "pre";
+
+  if (
+    name.includes("failure") ||
+    name.includes("failed") ||
+    name === "session.error"
+  )
+    return "failure";
+
+  if (
+    name.includes("sessionstart") ||
+    name.includes("thread.started") ||
+    name === "session.created"
+  )
+    return "session";
+
+  if (
+    name.includes("pretool") ||
+    name.includes("before") ||
+    name === "permission.asked"
+  )
+    return "pre";
+
+  return "post";
 }
 
 export function providerHookOutput(
