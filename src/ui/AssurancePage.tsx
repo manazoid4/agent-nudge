@@ -82,7 +82,10 @@ export function AssurancePage() {
           </div>
         </div>
 
-        <div className="assurance-console" aria-label="Assurance decision example">
+        <div
+          className="assurance-console"
+          aria-label="Assurance decision example"
+        >
           <div className="assurance-console-top">
             <span /> preflight · opencode · tool.execute.before
           </div>
@@ -135,7 +138,9 @@ export function AssurancePage() {
           <article>
             <CheckCircle2 />
             <strong>Record outcomes</strong>
-            <span>Separate delivery, review, changed action and prevention.</span>
+            <span>
+              Separate delivery, review, changed action and prevention.
+            </span>
           </article>
         </div>
       </section>
@@ -159,11 +164,15 @@ export function AssurancePage() {
         </div>
         <div className="provider-grid">
           {manifests.map((manifest) => {
-            const counts = levelOrder.map((level) => [
-              level,
-              Object.values(manifest.events).filter((item) => item === level)
-                .length,
-            ] as const);
+            const counts = levelOrder.map(
+              (level) =>
+                [
+                  level,
+                  Object.values(manifest.events).filter(
+                    (item) => item === level,
+                  ).length,
+                ] as const,
+            );
             return (
               <article className="provider-card" key={manifest.provider}>
                 <div className="provider-title">
@@ -184,14 +193,17 @@ export function AssurancePage() {
                 </div>
                 <ul>
                   <li>
-                    Worktree identity: {manifest.worktreeIdentity ? "yes" : "no"}
+                    Worktree identity:{" "}
+                    {manifest.worktreeIdentity ? "yes" : "no"}
                   </li>
                   <li>
-                    Subagent identity: {manifest.subagentIdentity ? "yes" : "no"}
+                    Subagent identity:{" "}
+                    {manifest.subagentIdentity ? "yes" : "no"}
                   </li>
                   <li>Checkpoint: {manifest.checkpoint}</li>
                   <li>
-                    Reversible installation: {manifest.reversibleInstall ? "yes" : "no"}
+                    Reversible installation:{" "}
+                    {manifest.reversibleInstall ? "yes" : "no"}
                   </li>
                 </ul>
                 <p>{manifest.limitations[0]}</p>
@@ -217,7 +229,10 @@ export function AssurancePage() {
           </div>
           <div className="event-grid">
             {[
-              ["Sessions", "created · status · idle · error · diff · compacted"],
+              [
+                "Sessions",
+                "created · status · idle · error · diff · compacted",
+              ],
               ["Actions", "tool before · tool after · command receipt"],
               ["Permissions", "asked · replied · effective capability"],
               ["Evidence", "file edits · watchers · LSP diagnostics"],
@@ -249,16 +264,42 @@ export function AssurancePage() {
       <section className="assurance-section assurance-shell" id="privacy">
         <div className="assurance-heading">
           <p>ASSURANCE PIPELINE</p>
-          <h2>Configuration, coordination, evidence and recovery stay distinct.</h2>
+          <h2>
+            Configuration, coordination, evidence and recovery stay distinct.
+          </h2>
         </div>
         <div className="pipeline">
           {[
-            ["01", "Capability", "What can this connected provider actually expose or deny?"],
-            ["02", "Provenance", "Which instructions, rules, skills and plugins were active?"],
-            ["03", "Preflight", "Do tasks, claims, worktrees or failed approaches conflict?"],
-            ["04", "Evidence", "What diagnostic, test, build, Git or human proof exists?"],
-            ["05", "Recovery", "Which valid checkpoint covers files, state and environment?"],
-            ["06", "Receipt", "Was the warning delivered, reviewed, useful and action-changing?"],
+            [
+              "01",
+              "Capability",
+              "What can this connected provider actually expose or deny?",
+            ],
+            [
+              "02",
+              "Provenance",
+              "Which instructions, rules, skills and plugins were active?",
+            ],
+            [
+              "03",
+              "Preflight",
+              "Do tasks, claims, worktrees or failed approaches conflict?",
+            ],
+            [
+              "04",
+              "Evidence",
+              "What diagnostic, test, build, Git or human proof exists?",
+            ],
+            [
+              "05",
+              "Recovery",
+              "Which valid checkpoint covers files, state and environment?",
+            ],
+            [
+              "06",
+              "Receipt",
+              "Was the warning delivered, reviewed, useful and action-changing?",
+            ],
           ].map(([number, title, body]) => (
             <article key={number}>
               <b>{number}</b>
