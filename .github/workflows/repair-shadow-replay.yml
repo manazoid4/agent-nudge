@@ -1,0 +1,54 @@
+name: repair Shadow Replay branch
+
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/shadow-replay-worktrees
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Complete Replay Lab link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/ui/AssurancePage.tsx')
+          text = path.read_text()
+          if 'href="/replay"' not in text:
+              marker = '''            </a>
+          </div>
+          <div className="assurance-boundary">'''
+              insertion = '''            </a>
+            <a className="assurance-button secondary" href="/replay">
+              <FlaskConical size={17} /> Open Replay Lab
+            </a>
+          </div>
+          <div className="assurance-boundary">'''
+              if marker not in text:
+                  raise SystemExit('Replay Lab insertion marker not found')
+              text = text.replace(marker, insertion, 1)
+          path.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run format
+      - name: Commit repaired feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs public src tests
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix: complete Shadow Replay live integration"
+          git push origin HEAD:agent/shadow-replay-worktrees
