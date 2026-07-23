@@ -10,13 +10,11 @@ import {
   ChevronRight,
   CircleDot,
   Clock3,
-  Copy,
   Database,
   Download,
   ExternalLink,
   FileCode2,
   Gauge,
-  Github,
   GitMerge,
   Inbox,
   Layers3,
@@ -332,7 +330,7 @@ function NudgeSpecimen() {
         <span>+10 evidence</span>
       </div>
       <div className="specimen-actions">
-        <button type="button" onClick={() => navigate("/demo/inbox")}> 
+        <button type="button" onClick={() => navigate("/demo/inbox")}>
           Show evidence
         </button>
         <button
@@ -580,7 +578,11 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           <button
             type="button"
             className="mobile-menu"
-            aria-label={navOpen ? "Close dashboard navigation" : "Open dashboard navigation"}
+            aria-label={
+              navOpen
+                ? "Close dashboard navigation"
+                : "Open dashboard navigation"
+            }
             aria-expanded={navOpen}
             aria-controls="app-navigation"
             onClick={() => setNavOpen((current) => !current)}
@@ -589,11 +591,14 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           </button>
           <div>
             <span>PROJECT</span>
-            <strong>{isPublicDemo ? "Recorded product scenario" : "Agent Nudge"}</strong>
+            <strong>
+              {isPublicDemo ? "Recorded product scenario" : "Agent Nudge"}
+            </strong>
           </div>
           <div className="top-actions">
             <span className="privacy">
-              <ShieldCheck size={15} /> {isPublicDemo ? "Fixture only" : "Local only"}
+              <ShieldCheck size={15} />{" "}
+              {isPublicDemo ? "Fixture only" : "Local only"}
             </span>
             <button
               type="button"
@@ -722,8 +727,8 @@ function ContextMeshView({ portfolio }: { portfolio: Portfolio }) {
                     <strong>{project.projectName}</strong>
                     <span>
                       {project.activeAgents} agent
-                      {project.activeAgents === 1 ? "" : "s"} · {project.receiptCount}{" "}
-                      receipts
+                      {project.activeAgents === 1 ? "" : "s"} ·{" "}
+                      {project.receiptCount} receipts
                     </span>
                   </div>
                   <div className="mesh-score">
@@ -803,7 +808,8 @@ function ProjectAssurance({ project }: { project: PortfolioProject }) {
         </div>
       </div>
       <div className="mesh-freshness">
-        <Clock3 size={16} /> Latest activity {relative(project.latestActivityAt)}
+        <Clock3 size={16} /> Latest activity{" "}
+        {relative(project.latestActivityAt)}
       </div>
     </section>
   );
@@ -994,7 +1000,8 @@ function InboxView({
               <ClassIcon value={selected.deliveryClass} />
               <div>
                 <span>
-                  {selected.deliveryClass.replace("_", " ")} · SCORE {selected.relevanceScore}
+                  {selected.deliveryClass.replace("_", " ")} · SCORE{" "}
+                  {selected.relevanceScore}
                 </span>
                 <h2>{selected.title}</h2>
               </div>
@@ -1024,7 +1031,9 @@ function InboxView({
                 aria-label="Open source path in the Agent Nudge repository"
                 onClick={() => {
                   const path = selected.sourceRefs[0]?.filePath;
-                  openExternal(path ? `${githubUrl}/blob/main/${path}` : githubUrl);
+                  openExternal(
+                    path ? `${githubUrl}/blob/main/${path}` : githubUrl,
+                  );
                 }}
               >
                 <ExternalLink size={16} />
@@ -1101,8 +1110,8 @@ function TimelineView({ snapshot }: { snapshot: Snapshot }) {
           <p>Nudge timeline</p>
           <h1 tabIndex={-1}>What context was routed</h1>
           <span>
-            This view currently shows nudge delivery records. Full protocol-event
-            reconstruction is tracked for v0.5.
+            This view currently shows nudge delivery records. Full
+            protocol-event reconstruction is tracked for v0.5.
           </span>
         </div>
       </div>
@@ -1151,7 +1160,11 @@ function RulesView() {
           </span>
         </div>
       </div>
-      <div className="rule-table" role="table" aria-label="Current routing rules">
+      <div
+        className="rule-table"
+        role="table"
+        aria-label="Current routing rules"
+      >
         <div className="rule-header" role="row">
           <span role="columnheader">Rule</span>
           <span role="columnheader">Delivery</span>
@@ -1161,7 +1174,11 @@ function RulesView() {
         {rows.map((row) => (
           <div key={row[0]} role="row">
             {row.map((cell, index) => (
-              <span key={cell} role="cell" className={index === 3 ? "status-ok" : ""}>
+              <span
+                key={cell}
+                role="cell"
+                className={index === 3 ? "status-ok" : ""}
+              >
                 {cell}
               </span>
             ))}
@@ -1280,10 +1297,17 @@ function DownloadPage() {
       <section className="public-section">
         <h2>First connection</h2>
         <ol className="numbered-steps">
-          <li>Run <code>agent-nudge doctor</code>.</li>
-          <li>Preview connector changes with <code>agent-nudge connect all --dry-run</code>.</li>
+          <li>
+            Run <code>agent-nudge doctor</code>.
+          </li>
+          <li>
+            Preview connector changes with{" "}
+            <code>agent-nudge connect all --dry-run</code>.
+          </li>
           <li>Review every target and backup location.</li>
-          <li>Apply explicitly with <code>agent-nudge connect all --apply</code>.</li>
+          <li>
+            Apply explicitly with <code>agent-nudge connect all --apply</code>.
+          </li>
           <li>Run the two-agent proof and inspect the first receipt.</li>
         </ol>
       </section>
@@ -1307,7 +1331,9 @@ function DocsPage() {
         <article className="public-card">
           <BookOpen />
           <h2>1. Declare intent</h2>
-          <p>An agent checks in with project, task, paths, tags, and heartbeat.</p>
+          <p>
+            An agent checks in with project, task, paths, tags, and heartbeat.
+          </p>
         </article>
         <article className="public-card">
           <AlertOctagon />
@@ -1317,7 +1343,9 @@ function DocsPage() {
         <article className="public-card">
           <ShieldCheck />
           <h2>3. Record outcome</h2>
-          <p>The recipient acknowledges, replans, releases, or disputes context.</p>
+          <p>
+            The recipient acknowledges, replans, releases, or disputes context.
+          </p>
         </article>
       </div>
       <section className="public-section split-section">
@@ -1361,17 +1389,24 @@ function SecurityPage() {
         <article className="public-card">
           <Database />
           <h2>Data minimisation</h2>
-          <p>Structured facts, paths, source references, claims, and receipts.</p>
+          <p>
+            Structured facts, paths, source references, claims, and receipts.
+          </p>
         </article>
         <article className="public-card">
           <LockKeyhole />
           <h2>Local control plane</h2>
-          <p>The daemon listens on 127.0.0.1 and does not require a cloud account.</p>
+          <p>
+            The daemon listens on 127.0.0.1 and does not require a cloud
+            account.
+          </p>
         </article>
         <article className="public-card">
           <RotateCcw />
           <h2>Reversible connectors</h2>
-          <p>Dry-run, owned fragments, external backups, drift refusal, rollback.</p>
+          <p>
+            Dry-run, owned fragments, external backups, drift refusal, rollback.
+          </p>
         </article>
       </div>
       <section className="public-section">
@@ -1382,27 +1417,27 @@ function SecurityPage() {
             multi-process trust claims.
           </li>
           <li>
-            <strong>Single writer:</strong> the daemon must become the sole SQLite
-            writer.
+            <strong>Single writer:</strong> the daemon must become the sole
+            SQLite writer.
           </li>
           <li>
-            <strong>Crash recovery:</strong> incomplete connector operations need
-            deterministic startup recovery.
+            <strong>Crash recovery:</strong> incomplete connector operations
+            need deterministic startup recovery.
           </li>
           <li>
             <strong>Unsigned builds:</strong> current Windows builds may trigger
             SmartScreen.
           </li>
           <li>
-            <strong>Coverage:</strong> provider hooks cannot stop hosted, disabled,
-            bypassed, or otherwise uncovered actions.
+            <strong>Coverage:</strong> provider hooks cannot stop hosted,
+            disabled, bypassed, or otherwise uncovered actions.
           </li>
         </ul>
       </section>
       <Callout>
         Report vulnerabilities privately through the repository security policy.
-        Do not include secrets, private source code, or customer data in a public
-        issue.
+        Do not include secrets, private source code, or customer data in a
+        public issue.
       </Callout>
       <div className="page-actions">
         <a className="button" href={`${githubUrl}/security`}>
@@ -1455,8 +1490,8 @@ function PricingPage() {
         ))}
       </div>
       <Callout>
-        No billing is implemented in v0.4. Pricing is intentionally labelled as a
-        hypothesis except for the free local Community core.
+        No billing is implemented in v0.4. Pricing is intentionally labelled as
+        a hypothesis except for the free local Community core.
       </Callout>
       <div className="page-actions">
         <a
@@ -1484,9 +1519,9 @@ function ChangelogPage() {
             <span>v0.4.0</span>
             <h2>Live Connect</h2>
             <p>
-              Reversible project connectors for Claude Code, Codex, and OpenCode;
-              local preflight and receipt hooks; offline outbox; Windows packaging;
-              expanded tests.
+              Reversible project connectors for Claude Code, Codex, and
+              OpenCode; local preflight and receipt hooks; offline outbox;
+              Windows packaging; expanded tests.
             </p>
           </div>
         </article>
@@ -1496,9 +1531,9 @@ function ChangelogPage() {
             <span>In progress</span>
             <h2>Reliability, trust, and adoption</h2>
             <p>
-              Sole-writer ledger, crash recovery, local authentication, corrected
-              outcome metrics, routed public site, installation funnel, and Shadow
-              Mode foundations.
+              Sole-writer ledger, crash recovery, local authentication,
+              corrected outcome metrics, routed public site, installation
+              funnel, and Shadow Mode foundations.
             </p>
           </div>
         </article>
@@ -1688,7 +1723,8 @@ function Brand({ compact = false }: { compact?: boolean }) {
       aria-label="Agent Nudge home"
       onClick={(event) => {
         if (isDesktop) return;
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          return;
         event.preventDefault();
         navigate("/");
       }}
@@ -1719,7 +1755,8 @@ function RouteLink({
       href={to}
       className={className}
       onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          return;
         event.preventDefault();
         navigate(to);
       }}
@@ -1733,7 +1770,7 @@ function navigate(path: string) {
   if (isDesktop) return;
   history.pushState({}, "", path);
   dispatchEvent(new PopStateEvent("popstate"));
-  window.scrollTo({ top: 0, behavior: "instant" });
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function readView(): View {

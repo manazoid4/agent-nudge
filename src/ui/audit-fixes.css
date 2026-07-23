@@ -134,7 +134,10 @@
   border-radius: 8px;
   background: var(--bg);
   color: var(--mint);
-  font: 13px/1.75 "Cascadia Mono", Consolas, monospace;
+  font:
+    13px/1.75 "Cascadia Mono",
+    Consolas,
+    monospace;
 }
 
 .public-content code {
@@ -199,7 +202,10 @@
 
 .price-card > span {
   color: var(--primary);
-  font: 700 11px "Cascadia Mono", Consolas, monospace;
+  font:
+    700 11px "Cascadia Mono",
+    Consolas,
+    monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -226,7 +232,10 @@
 .changelog-list time,
 .changelog-list span {
   color: var(--primary);
-  font: 700 11px "Cascadia Mono", Consolas, monospace;
+  font:
+    700 11px "Cascadia Mono",
+    Consolas,
+    monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
