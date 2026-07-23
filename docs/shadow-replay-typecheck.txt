@@ -1,6 +1,0 @@
-
-> agent-nudge@0.4.0 typecheck
-> tsc --noEmit
-
-src/core/shadow-mode.ts(221,8): error TS2532: Object is possibly 'undefined'.
-src/core/shadow-mode.ts(221,29): error TS2532: Object is possibly 'undefined'.
