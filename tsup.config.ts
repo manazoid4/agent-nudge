@@ -6,6 +6,7 @@ export default defineConfig({
     preload: "electron/preload.ts",
     daemon: "src/daemon/run.ts",
     cli: "src/cli/index.ts",
+    assure: "src/cli/assure.ts",
     hook: "src/adapters/hook-runner.ts",
     mcp: "src/mcp/server.ts",
   },
