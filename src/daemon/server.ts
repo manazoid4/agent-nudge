@@ -30,8 +30,7 @@ import { sanitizeObject } from "../core/redaction.js";
 import { NudgeDatabase } from "../storage/database.js";
 
 export const DEFAULT_PORT = 47831;
-const evidenceStorageKind =
-  "evidence" as Parameters<NudgeDatabase["put"]>[0];
+const evidenceStorageKind = "evidence" as Parameters<NudgeDatabase["put"]>[0];
 
 export function createServer(database: NudgeDatabase) {
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
@@ -73,7 +72,10 @@ export function createServer(database: NudgeDatabase) {
     return {
       schemaVersion: 1,
       projectId,
-      evidence: database.list<StructuredEvidence>(evidenceStorageKind, projectId),
+      evidence: database.list<StructuredEvidence>(
+        evidenceStorageKind,
+        projectId,
+      ),
     };
   });
 
