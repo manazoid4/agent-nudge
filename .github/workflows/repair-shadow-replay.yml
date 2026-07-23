@@ -1,8 +1,8 @@
-name: repair Shadow Replay branch
+name: capture Shadow Replay diagnostics
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [reopened, synchronize]
     branches:
       - main
 
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  capture:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -21,35 +21,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Complete Replay Lab link
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('src/ui/AssurancePage.tsx')
-          text = path.read_text()
-          if 'href="/replay"' not in text:
-              anchor = 'href="/demo/portfolio"'
-              start = text.find(anchor)
-              if start < 0:
-                  raise SystemExit('Context Mesh anchor not found')
-              close = text.find('</a>', start)
-              if close < 0:
-                  raise SystemExit('Context Mesh closing anchor not found')
-              close += len('</a>')
-              insertion = '''
-            <a className="assurance-button secondary" href="/replay">
-              <FlaskConical size={17} /> Open Replay Lab
-            </a>'''
-              text = text[:close] + insertion + text[close:]
-          path.write_text(text)
-          PY
       - run: npm ci
-      - run: npm run format
-      - name: Commit repaired feature branch
+      - name: Capture strict TypeScript diagnostics
+        run: npm run typecheck > docs/shadow-replay-typecheck.txt 2>&1 || true
+      - name: Commit diagnostics to feature branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs public src tests
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "fix: complete Shadow Replay live integration"
+          git add docs/shadow-replay-typecheck.txt
+          git commit -m "chore: capture Shadow Replay typecheck diagnostics"
           git push origin HEAD:agent/shadow-replay-worktrees
