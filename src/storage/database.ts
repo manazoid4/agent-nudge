@@ -33,7 +33,6 @@ type StoredKind =
   | "sessions"
   | "tasks"
   | "events"
-  | "evidence"
   | "facts"
   | "nudges"
   | "claims"
@@ -195,9 +194,19 @@ export class NudgeDatabase {
       extensionMetadata: current?.extensionMetadata ?? {},
     };
     this.put("sessions", session);
-    this.appendChange(input.projectId, "session", session.id, "check-in", at);
-    if (input.task)
-      this.updateTask(input.projectId, input.sessionId, input.task, now);
+    this.appendChange(input.projectId, "session", session.id, "checked_in", at);
+    if (session.activeTask) {
+      const task: TaskRecord = {
+        id: session.id,
+        schemaVersion: 1,
+        projectId: session.projectId,
+        sessionId: session.id,
+        ...session.activeTask,
+        updatedAt: at,
+      };
+      this.put("tasks", { ...task, createdAt: at });
+      this.appendChange(input.projectId, "task", task.id, "updated", at);
+    }
     return session;
   }
 
@@ -206,65 +215,38 @@ export class NudgeDatabase {
     sessionId: string,
     task?: CheckInInput["task"],
     now = new Date(),
-  ): AgentSession {
+  ) {
     const current = this.requireSession(projectId, sessionId);
-    const session: AgentSession = {
-      ...current,
-      lastSeenAt: now.toISOString(),
-      status: "active",
-      activeTask: task ?? current.activeTask,
-    };
-    this.put("sessions", session);
-    this.appendChange(
-      projectId,
-      "session",
-      sessionId,
-      "heartbeat",
-      now.toISOString(),
+    return this.checkIn(
+      {
+        sessionId,
+        projectId,
+        projectName: current.projectName,
+        provider: current.provider,
+        cwd: current.cwd,
+        task: task ?? current.activeTask,
+      },
+      now,
     );
-    if (task) this.updateTask(projectId, sessionId, task, now);
-    return session;
-  }
-
-  updateTask(
-    projectId: string,
-    sessionId: string,
-    task: NonNullable<CheckInInput["task"]>,
-    now = new Date(),
-  ): TaskRecord {
-    this.requireSession(projectId, sessionId);
-    const record: TaskRecord = {
-      id: `task-${sessionId}`,
-      schemaVersion: 1,
-      projectId,
-      sessionId,
-      summary: task.summary,
-      paths: task.paths,
-      tags: task.tags,
-      updatedAt: now.toISOString(),
-    };
-    this.put("tasks", { ...record, createdAt: record.updatedAt });
-    this.appendChange(
-      projectId,
-      "task",
-      record.id,
-      "updated",
-      record.updatedAt,
-    );
-    return record;
   }
 
   publishFact(input: PublishFactInput, now = new Date()) {
     this.requireSession(input.projectId, input.authorSessionId);
-    const timestamp = now.toISOString();
-    const id = `fact-${randomUUID()}`;
+    const at = now.toISOString();
+    const semanticSource = JSON.stringify({
+      projectId: input.projectId,
+      authorSessionId: input.authorSessionId,
+      kind: input.kind,
+      title: input.title,
+      summary: input.summary,
+      paths: input.paths,
+      tags: input.tags,
+    });
     const sourceHash = createHash("sha256")
-      .update(
-        `${input.projectId}:${input.authorSessionId}:${input.kind}:${input.title}:${input.summary}:${timestamp}`,
-      )
+      .update(semanticSource)
       .digest("hex");
     const fact: ContextFact = {
-      id,
+      id: `fact-${sourceHash.slice(0, 32)}`,
       schemaVersion: 1,
       projectId: input.projectId,
       authorSessionId: input.authorSessionId,
@@ -282,112 +264,57 @@ export class NudgeDatabase {
         },
       ],
       confidence: input.confidence,
-      createdAt: timestamp,
-      effectiveAt: timestamp,
+      createdAt: at,
+      effectiveAt: at,
       expiresAt: input.expiresAt,
       contradictsFactIds: [],
       dependsOnFactIds: [],
       invalidatesFactIds: [],
       sensitivity: "normal",
-      extensionMetadata: { ingestion: "live-sync-v1" },
+      extensionMetadata: {},
     };
-    return this.recordAndFanOutFact(fact);
+    return this.recordAndFanOutFact(fact, now);
   }
 
   recordAndFanOutFact(fact: ContextFact, now = new Date()) {
-    const existing = this.get<ContextFact>("facts", fact.id);
-    if (existing)
-      return { fact: existing, nudges: [] as Nudge[], duplicate: true };
     this.requireSession(fact.projectId, fact.authorSessionId);
+    const existing = this.get<ContextFact>("facts", fact.id);
+    if (existing) {
+      return {
+        fact: existing,
+        nudges: this.list<Nudge>("nudges", fact.projectId).filter(
+          (nudge) => nudge.factId === fact.id,
+        ),
+      };
+    }
     this.put("facts", fact);
     this.appendChange(
       fact.projectId,
       "fact",
       fact.id,
       "published",
-      fact.createdAt,
+      now.toISOString(),
     );
-    const sessions = this.list<AgentSession>("sessions", fact.projectId);
-    const nudges: Nudge[] = [];
-    for (const recipient of sessions) {
-      if (recipient.id === fact.authorSessionId || recipient.status === "ended")
-        continue;
-      const decision = decideNudge(fact, recipient, { now });
-      if (decision.suppressed) continue;
-      const nudge = compileNudge(fact, recipient, decision, now);
-      const existingNudge = this.list<Nudge>("nudges", fact.projectId).find(
-        (item) => item.dedupeKey === nudge.dedupeKey,
-      );
-      if (existingNudge) continue;
-      this.put("nudges", nudge);
-      this.appendChange(
-        fact.projectId,
-        "nudge",
-        nudge.id,
-        "queued",
-        nudge.createdAt,
-      );
-      nudges.push(nudge);
-    }
-    return { fact, nudges, duplicate: false };
-  }
-
-  sync(input: SyncRequest, now = new Date()): SyncResponse {
-    const recipient = this.requireSession(input.projectId, input.sessionId);
-    const sessions = this.list<AgentSession>("sessions", input.projectId);
-    const facts = this.list<ContextFact>("facts", input.projectId);
-    const nudges = this.list<Nudge>("nudges", input.projectId).filter(
-      (item) => item.recipientSessionId === recipient.id,
-    );
-    const claims = this.activeClaims(input.projectId, now);
-    const peers = sessions
-      .filter(
-        (session) =>
-          session.id !== recipient.id && isSessionPresent(session, now),
-      )
-      .map(toPeerPresence);
-    const changes = this.changeLog(input.projectId, input.cursor);
-    const cursor = changes.at(-1)?.sequence ?? input.cursor;
-    const status = liveSyncStatus({ recipient, facts, nudges, claims, now });
-    const digest = buildLiveSyncDigest({
-      projectId: input.projectId,
-      recipientSessionId: recipient.id,
-      cursor,
-      peers,
-      nudges,
-      claims,
-    });
-    return {
-      schemaVersion: 1,
-      projectId: input.projectId,
-      recipientSessionId: recipient.id,
-      generatedAt: now.toISOString(),
-      cursor,
-      digest,
-      status,
-      peers,
-      nudges,
-      claims,
-      changes,
-    };
+    const nudges = this.fanOutFact(fact, now);
+    return { fact, nudges };
   }
 
   acquireClaim(input: ClaimRequest, now = new Date()) {
-    this.requireSession(input.projectId, input.sessionId);
-    const path = normalizeClaimPath(input.path);
-    const pathKey = path.toLowerCase();
-    const current = this.activeClaims(input.projectId, now).find(
-      (claim) => claim.pathKey === pathKey,
+    const owner = this.requireSession(input.projectId, input.sessionId);
+    this.expireClaims(input.projectId, now);
+    const pathKey = normalizeClaimPath(input.path);
+    const claims = this.list<PathClaim>("claims", input.projectId);
+    const sameOwner = claims.find(
+      (claim) =>
+        claim.state === "active" &&
+        claim.sessionId === input.sessionId &&
+        claim.pathKey === pathKey,
     );
-    if (current && current.sessionId !== input.sessionId)
-      return { acquired: false as const, conflict: current };
-    if (current && current.sessionId === input.sessionId) {
-      const renewed: PathClaim = {
-        ...current,
-        leaseExpiresAt: new Date(
-          now.getTime() + input.leaseSeconds * 1000,
-        ).toISOString(),
-      };
+    const leaseExpiresAt = new Date(
+      now.getTime() + input.leaseSeconds * 1000,
+    ).toISOString();
+    if (sameOwner) {
+      const renewed: PathClaim = { ...sameOwner, leaseExpiresAt };
       this.put("claims", renewed);
       this.appendChange(
         input.projectId,
@@ -396,133 +323,129 @@ export class NudgeDatabase {
         "renewed",
         now.toISOString(),
       );
-      return { acquired: true as const, claim: renewed, renewed: true };
+      return { acquired: true as const, claim: renewed };
     }
-    const factId = `fact-${randomUUID()}`;
+    const conflict = claims.find(
+      (claim) =>
+        claim.state === "active" &&
+        claim.sessionId !== input.sessionId &&
+        claim.pathKey === pathKey &&
+        Date.parse(claim.leaseExpiresAt) > now.getTime(),
+    );
+    if (conflict) {
+      const fact = this.get<ContextFact>("facts", conflict.factId);
+      if (fact) {
+        const recipient: AgentSession = {
+          ...owner,
+          activeTask: {
+            summary: owner.activeTask?.summary ?? `Working on ${input.path}`,
+            paths: Array.from(
+              new Set([...(owner.activeTask?.paths ?? []), input.path]),
+            ),
+            tags: owner.activeTask?.tags ?? [],
+          },
+        };
+        this.ensureNudge(fact, recipient, now);
+      }
+      return { acquired: false as const, conflict };
+    }
+
+    const id = `claim-${randomUUID()}`;
     const claim: PathClaim = {
-      id: `claim-${randomUUID()}`,
+      id,
       schemaVersion: 1,
       projectId: input.projectId,
       sessionId: input.sessionId,
-      path,
+      path: input.path,
       pathKey,
       state: "active",
       acquiredAt: now.toISOString(),
-      leaseExpiresAt: new Date(
-        now.getTime() + input.leaseSeconds * 1000,
-      ).toISOString(),
-      factId,
+      leaseExpiresAt,
+      factId: `fact-${id}`,
     };
-    const fact: ContextFact = {
-      id: factId,
-      schemaVersion: 1,
-      projectId: input.projectId,
-      authorSessionId: input.sessionId,
-      kind: "claim",
-      title: `${input.sessionId} claimed ${path}`,
-      summary: `An active agent is editing ${path}. Coordinate before changing the same path.`,
-      paths: [path],
-      tags: ["claim", "live-sync"],
-      sourceRefs: [
-        {
-          type: "hook-event",
-          label: "Agent Nudge path claim",
-          sessionId: input.sessionId,
-          filePath: path,
-          sourceHash: createHash("sha256")
-            .update(`${input.projectId}:${input.sessionId}:${pathKey}`)
-            .digest("hex"),
-        },
-      ],
-      confidence: 1,
-      createdAt: now.toISOString(),
-      effectiveAt: now.toISOString(),
-      expiresAt: claim.leaseExpiresAt,
-      contradictsFactIds: [],
-      dependsOnFactIds: [],
-      invalidatesFactIds: [],
-      sensitivity: "normal",
-      extensionMetadata: { claimId: claim.id },
-    };
-    this.put("claims", claim);
+    this.put("claims", { ...claim, createdAt: claim.acquiredAt });
     this.appendChange(
       input.projectId,
       "claim",
       claim.id,
       "acquired",
-      claim.acquiredAt,
+      now.toISOString(),
     );
-    const routed = this.recordAndFanOutFact(fact, now);
-    return { acquired: true as const, claim, renewed: false, routed };
-  }
-
-  releaseClaim(input: ReleaseClaimRequest, now = new Date()) {
-    const claim = this.get<PathClaim>("claims", input.claimId);
-    if (!claim || claim.projectId !== input.projectId)
-      throw new Error("claim_not_found");
-    if (claim.sessionId !== input.sessionId) throw new Error("claim_not_owned");
-    if (claim.state === "released") return claim;
-    const released: PathClaim = {
-      ...claim,
-      state: "released",
-      releasedAt: now.toISOString(),
-    };
-    this.put("claims", released);
-    this.appendChange(
-      input.projectId,
-      "claim",
-      claim.id,
-      "released",
-      released.releasedAt,
-    );
-    this.supersedeClaimNudges(input.projectId, claim.factId, now);
-    const releaseFact: ContextFact = {
-      id: `fact-${randomUUID()}`,
+    const fact: ContextFact = {
+      id: claim.factId,
       schemaVersion: 1,
       projectId: input.projectId,
       authorSessionId: input.sessionId,
-      kind: "release",
-      title: `${claim.path} claim released`,
-      summary: `${input.sessionId} released the active claim for ${claim.path}.`,
-      paths: [claim.path],
-      tags: ["claim", "release"],
+      kind: "claim",
+      title: `${owner.provider} is editing ${input.path}`.slice(0, 160),
+      summary:
+        "Another active agent holds a write lease for this path. Coordinate before editing.",
+      paths: [input.path],
+      tags: owner.activeTask?.tags ?? [],
       sourceRefs: [
         {
           type: "manual",
-          label: "Agent Nudge claim release",
+          label: "Agent Nudge path lease",
+          filePath: input.path,
           sessionId: input.sessionId,
-          filePath: claim.path,
           sourceHash: createHash("sha256")
-            .update(`${claim.id}:${released.releasedAt}`)
+            .update(
+              `${input.projectId}:${input.sessionId}:${pathKey}:${claim.acquiredAt}`,
+            )
             .digest("hex"),
         },
       ],
       confidence: 1,
-      createdAt: released.releasedAt,
-      effectiveAt: released.releasedAt,
-      expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
-      contradictsFactIds: [claim.factId],
+      createdAt: claim.acquiredAt,
+      effectiveAt: claim.acquiredAt,
+      expiresAt: claim.leaseExpiresAt,
+      contradictsFactIds: [],
       dependsOnFactIds: [],
-      invalidatesFactIds: [claim.factId],
+      invalidatesFactIds: [],
       sensitivity: "normal",
-      extensionMetadata: { claimId: claim.id },
+      extensionMetadata: {},
     };
-    const routed = this.recordAndFanOutFact(releaseFact, now);
-    return { ...released, routed };
+    this.recordAndFanOutFact(fact, now);
+    return { acquired: true as const, claim };
+  }
+
+  releaseClaim(input: ReleaseClaimRequest, now = new Date()) {
+    const session = this.requireSession(input.projectId, input.sessionId);
+    const current = this.get<PathClaim>("claims", input.claimId);
+    if (!current || current.projectId !== input.projectId)
+      throw new Error("claim_not_found");
+    if (current.sessionId !== session.id) throw new Error("claim_not_owned");
+    if (current.state !== "active") return current;
+    const at = now.toISOString();
+    const released: PathClaim = {
+      ...current,
+      state: "released",
+      releasedAt: at,
+      leaseExpiresAt: at,
+    };
+    this.put("claims", released);
+    this.appendChange(input.projectId, "claim", current.id, "released", at);
+    this.clearClaimNudges(current.factId, input.projectId, "superseded", at);
+    const fact = this.get<ContextFact>("facts", current.factId);
+    if (fact) {
+      const expiredFact: ContextFact = { ...fact, expiresAt: at };
+      this.put("facts", expiredFact);
+    }
+    return released;
   }
 
   releaseSessionClaims(
     projectId: string,
     sessionId: string,
-    paths: string[] = [],
+    paths: string[],
     now = new Date(),
   ) {
-    const keys = new Set(
-      paths.map((path) => normalizeClaimPath(path).toLowerCase()),
-    );
-    const claims = this.activeClaims(projectId, now).filter(
+    this.requireSession(projectId, sessionId);
+    const keys = new Set(paths.map(normalizeClaimPath));
+    const claims = this.list<PathClaim>("claims", projectId).filter(
       (claim) =>
         claim.sessionId === sessionId &&
+        claim.state === "active" &&
         (keys.size === 0 || keys.has(claim.pathKey)),
     );
     return claims.map((claim) =>
@@ -537,168 +460,259 @@ export class NudgeDatabase {
       throw new Error("nudge_not_found");
     if (nudge.recipientSessionId !== input.sessionId)
       throw new Error("nudge_not_owned");
-    if (nudge.state === "acknowledged") return nudge;
-    const updated: Nudge = {
-      ...nudge,
+    const updated = this.updateNudge(input.nudgeId, {
       state: "acknowledged",
       acknowledgedAt: now.toISOString(),
-    };
-    this.put("nudges", updated);
-    this.put("feedback", {
-      id: `feedback-${randomUUID()}`,
-      projectId: input.projectId,
-      nudgeId: input.nudgeId,
-      sessionId: input.sessionId,
-      action: "acknowledged",
-      at: updated.acknowledgedAt,
     });
     this.appendChange(
       input.projectId,
       "nudge",
-      updated.id,
+      input.nudgeId,
       "acknowledged",
-      updated.acknowledgedAt,
+      now.toISOString(),
     );
     return updated;
   }
 
-  activeClaims(projectId: string, now = new Date()) {
-    const claims = this.list<PathClaim>("claims", projectId);
-    return claims.filter(
-      (claim) =>
-        claim.state === "active" &&
-        Date.parse(claim.leaseExpiresAt) > now.getTime(),
-    );
+  sync(input: SyncRequest, now = new Date()): SyncResponse {
+    this.requireSession(input.projectId, input.sessionId);
+    this.expireClaims(input.projectId, now);
+    const sessions = this.list<AgentSession>("sessions", input.projectId);
+    const peers = sessions
+      .filter(
+        (session) =>
+          session.id !== input.sessionId && isSessionPresent(session, now),
+      )
+      .map(toPeerPresence)
+      .sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+    const nudges = this.list<Nudge>("nudges", input.projectId)
+      .filter(
+        (nudge) =>
+          nudge.recipientSessionId === input.sessionId &&
+          ["queued", "delivered", "snoozed"].includes(nudge.state) &&
+          Date.parse(nudge.expiresAt) > now.getTime(),
+      )
+      .sort((a, b) => a.dedupeKey.localeCompare(b.dedupeKey));
+    const claims = this.list<PathClaim>("claims", input.projectId)
+      .filter(
+        (claim) =>
+          claim.state === "active" &&
+          Date.parse(claim.leaseExpiresAt) > now.getTime(),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const changes = this.listChanges(input.projectId, input.cursor);
+    const cursor = changes.at(-1)?.sequence ?? input.cursor;
+    return {
+      schemaVersion: 1,
+      projectId: input.projectId,
+      recipientSessionId: input.sessionId,
+      generatedAt: now.toISOString(),
+      cursor,
+      digest: buildLiveSyncDigest({
+        projectId: input.projectId,
+        recipientSessionId: input.sessionId,
+        peers,
+        nudges,
+        claims,
+      }),
+      status: liveSyncStatus(nudges),
+      peers,
+      nudges,
+      claims,
+      changes,
+    };
   }
 
-  changeLog(projectId: string, cursor = 0): ChangeLogEntry[] {
+  private requireSession(projectId: string, sessionId: string) {
+    const session = this.get<AgentSession>("sessions", sessionId);
+    if (!session) throw new Error("session_not_found");
+    if (session.projectId !== projectId)
+      throw new Error("session_project_mismatch");
+    return session;
+  }
+
+  private fanOutFact(fact: ContextFact, now: Date) {
+    return this.list<AgentSession>("sessions", fact.projectId)
+      .filter(
+        (session) =>
+          session.id !== fact.authorSessionId && isSessionPresent(session, now),
+      )
+      .map((session) => this.ensureNudge(fact, session, now))
+      .filter((nudge): nudge is Nudge => Boolean(nudge));
+  }
+
+  private ensureNudge(
+    fact: ContextFact,
+    recipient: AgentSession,
+    now: Date,
+  ): Nudge | undefined {
+    const decision = decideNudge(fact, recipient, { now });
+    if (decision.suppressed) return undefined;
+    const compiled = compileNudge(fact, recipient, decision, now);
+    const candidate: Nudge = {
+      ...compiled,
+      id: `nudge-${compiled.dedupeKey.slice(0, 32)}`,
+      correlationId: `corr-${compiled.dedupeKey.slice(0, 24)}`,
+      traceId: compiled.dedupeKey.slice(0, 32),
+    };
+    const existing = this.list<Nudge>("nudges", fact.projectId).find(
+      (nudge) => nudge.dedupeKey === candidate.dedupeKey,
+    );
+    if (existing) return existing;
+    this.put("nudges", candidate);
+    this.appendChange(
+      fact.projectId,
+      "nudge",
+      candidate.id,
+      "queued",
+      now.toISOString(),
+    );
+    return candidate;
+  }
+
+  private clearClaimNudges(
+    factId: string,
+    projectId: string,
+    state: "expired" | "superseded",
+    at: string,
+  ) {
+    for (const nudge of this.list<Nudge>("nudges", projectId).filter(
+      (item) =>
+        item.factId === factId &&
+        ["queued", "delivered", "snoozed"].includes(item.state),
+    )) {
+      this.updateNudge(nudge.id, { state });
+      this.appendChange(projectId, "nudge", nudge.id, state, at);
+    }
+  }
+
+  private expireClaims(projectId: string, now: Date) {
+    const at = now.toISOString();
+    for (const claim of this.list<PathClaim>("claims", projectId).filter(
+      (item) =>
+        item.state === "active" &&
+        Date.parse(item.leaseExpiresAt) <= now.getTime(),
+    )) {
+      const expired: PathClaim = {
+        ...claim,
+        state: "expired",
+        releasedAt: at,
+      };
+      this.put("claims", expired);
+      this.appendChange(projectId, "claim", claim.id, "expired", at);
+      this.clearClaimNudges(claim.factId, projectId, "expired", at);
+    }
+  }
+
+  private listChanges(projectId: string, after: number): ChangeLogEntry[] {
     const rows = this.db
       .prepare(
-        "SELECT sequence, project_id, entity_type, entity_id, action, at FROM change_log WHERE project_id = ? AND sequence > ? ORDER BY sequence ASC",
+        "SELECT sequence, project_id, entity_type, entity_id, action, at FROM change_log WHERE project_id = ? AND sequence > ? ORDER BY sequence ASC LIMIT 1000",
       )
-      .all(projectId, cursor);
-    return rows.map((row) => {
-      const value = row as Record<string, unknown>;
-      return {
-        sequence: Number(value.sequence),
-        projectId: String(value.project_id),
-        entityType: value.entity_type as ChangeLogEntry["entityType"],
-        entityId: String(value.entity_id),
-        action: String(value.action),
-        at: String(value.at),
-      };
-    });
-  }
-
-  contextPack(projectId: string, recipientSessionId?: string) {
-    const sessions = this.list<AgentSession>("sessions", projectId);
-    const facts = this.list<ContextFact>("facts", projectId);
-    const nudges = this.list<Nudge>("nudges", projectId);
-    return buildContextPack({
-      projectId,
-      recipientSessionId,
-      sessions,
-      facts,
-      nudges,
-    });
-  }
-
-  portfolioSummary(now = new Date()) {
-    return buildPortfolioSummary(
-      this.list<AgentSession>("sessions"),
-      this.list<ContextFact>("facts"),
-      this.list<Nudge>("nudges"),
-      this.list<PathClaim>("claims"),
-      now,
-    );
+      .all(projectId, after) as Array<{
+      sequence: number;
+      project_id: string;
+      entity_type: ChangeLogEntry["entityType"];
+      entity_id: string;
+      action: string;
+      at: string;
+    }>;
+    return rows.map((row) => ({
+      sequence: row.sequence,
+      projectId: row.project_id,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      action: row.action,
+      at: row.at,
+    }));
   }
 
   snapshot(projectId?: string) {
     const sessions = this.list<AgentSession>("sessions", projectId);
-    const events = this.list<AgentEvent>("events", projectId);
     const facts = this.list<ContextFact>("facts", projectId);
     const nudges = this.list<Nudge>("nudges", projectId);
+    const events = this.list<AgentEvent>("events", projectId);
     return {
       sessions,
-      events,
+      tasks: this.list<TaskRecord>("tasks", projectId),
       facts,
       nudges,
+      claims: this.list<PathClaim>("claims", projectId),
+      events,
       metrics: {
         activeAgents: sessions.filter((item) => item.status === "active")
           .length,
-        openNudges: nudges.filter((item) => item.state === "queued").length,
+        delivered: nudges.filter((item) => item.state !== "queued").length,
         acknowledged: nudges.filter((item) => item.state === "acknowledged")
           .length,
         conflictsPrevented: nudges.filter(
-          (item) => item.deliveryClass === "BLOCK" && item.state !== "queued",
+          (item) =>
+            item.deliveryClass === "BLOCK" &&
+            ["acknowledged", "delivered"].includes(item.state),
         ).length,
+        queued: nudges.filter((item) => item.state === "queued").length,
       },
     };
   }
 
+  contextPack(projectId: string, recipientSessionId?: string) {
+    const snapshot = this.snapshot(projectId);
+    return buildContextPack({
+      projectId,
+      recipientSessionId,
+      sessions: snapshot.sessions,
+      facts: snapshot.facts,
+      nudges: snapshot.nudges,
+    });
+  }
+
+  portfolioSummary() {
+    return buildPortfolioSummary({
+      sessions: this.list<AgentSession>("sessions"),
+      facts: this.list<ContextFact>("facts"),
+      nudges: this.list<Nudge>("nudges"),
+      events: this.list<AgentEvent>("events"),
+    });
+  }
+
+  seedScenario(data: {
+    author: AgentSession;
+    recipient: AgentSession;
+    fact: ContextFact;
+    nudge?: Nudge;
+  }) {
+    this.put("sessions", data.author);
+    this.put("sessions", data.recipient);
+    this.put("facts", data.fact);
+    if (data.nudge) this.put("nudges", data.nudge);
+  }
+
   exportAll() {
     return {
-      sessions: this.list("sessions"),
-      tasks: this.list("tasks"),
-      events: this.list("events"),
-      evidence: this.list("evidence"),
-      facts: this.list("facts"),
-      nudges: this.list("nudges"),
-      claims: this.list("claims"),
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      ...this.snapshot(),
       feedback: this.list("feedback"),
       manifests: this.list("manifests"),
     };
   }
 
   purgePreview() {
-    const counts = this.db
-      .prepare("SELECT kind, COUNT(*) AS count FROM records GROUP BY kind")
-      .all() as Array<{ kind: string; count: number }>;
-    return {
-      dryRun: true,
-      counts: Object.fromEntries(
-        counts.map((row) => [row.kind, Number(row.count)]),
-      ),
-    };
-  }
-
-  seedScenario(result: {
-    sessions: AgentSession[];
-    events: AgentEvent[];
-    facts: ContextFact[];
-    nudges: Nudge[];
-  }) {
-    result.sessions.forEach((session) => this.put("sessions", session));
-    result.events.forEach((event) => this.putEvent(event));
-    result.facts.forEach((fact) => this.put("facts", fact));
-    result.nudges.forEach((nudge) => this.put("nudges", nudge));
+    return (
+      [
+        "sessions",
+        "tasks",
+        "events",
+        "facts",
+        "nudges",
+        "claims",
+        "feedback",
+        "manifests",
+      ] as StoredKind[]
+    ).map((kind) => ({ kind, count: this.list(kind).length }));
   }
 
   close() {
     this.db.close();
-  }
-
-  private supersedeClaimNudges(projectId: string, factId: string, now: Date) {
-    for (const nudge of this.list<Nudge>("nudges", projectId)) {
-      if (
-        nudge.factId === factId &&
-        !["expired", "superseded", "dismissed"].includes(nudge.state)
-      )
-        this.put("nudges", {
-          ...nudge,
-          state: "superseded",
-          extensionMetadata: {
-            ...nudge.extensionMetadata,
-            supersededAt: now.toISOString(),
-          },
-        });
-    }
-  }
-
-  private requireSession(projectId: string, sessionId: string) {
-    const session = this.get<AgentSession>("sessions", sessionId);
-    if (!session || session.projectId !== projectId)
-      throw new Error("session_not_found");
-    return session;
   }
 }
