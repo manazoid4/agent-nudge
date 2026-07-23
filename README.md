@@ -4,7 +4,7 @@
 
 ![Agent Nudge status](https://img.shields.io/badge/status-Windows_MVP-79d99a) ![Privacy](https://img.shields.io/badge/privacy-local--first-173d2a) ![License](https://img.shields.io/badge/license-MIT-black)
 
-[Open the live interactive demo](https://agent-nudge-bay.vercel.app/#demo)
+[Website](https://agent-nudge-bay.vercel.app/) · [Interactive recorded scenario](https://agent-nudge-bay.vercel.app/demo/overview) · [Download options](https://agent-nudge-bay.vercel.app/download) · [Documentation](https://agent-nudge-bay.vercel.app/docs) · [Security](https://agent-nudge-bay.vercel.app/security) · [Changelog](https://agent-nudge-bay.vercel.app/changelog)
 
 ## Live product proof
 
@@ -24,18 +24,33 @@ agent check-in + task intent
 - Failed approach: Redis test failures surface before another agent repeats the approach.
 - Irrelevant suppression: an unrelated documentation event is scored `DROP`.
 
-The live proof uses session check-in, claim, sync, and acknowledgement APIs from a clean SQLite ledger. Releasing the claim changes the recipient from `HOLD` to `CLEAR`. Duplicate fact publication creates one recipient nudge.
+The local proof uses session check-in, claim, sync, and acknowledgement APIs from a clean SQLite ledger. Releasing the claim changes the recipient from `HOLD` to `CLEAR`. Duplicate fact publication creates one recipient nudge.
+
+The public browser experience is an interactive recorded scenario using public-safe fixtures. It does not run remote agents or upload repository context.
 
 Every delivered nudge shows its score factors, evidence reference, freshness, recipient, state, and reason for arriving now.
 
 The v0.2 Context Mesh remains the cross-project read model. V0.3 added the [Live Sync contract](docs/LIVE-SYNC.md); v0.4 adds [reversible Live Connect](docs/LIVE-CONNECT.md). See the [complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
+
+## Current direction
+
+The next release is reliability, trust, and adoption—not cloud expansion.
+
+- [Product and repository audit](docs/AUDIT_2026-07-23.md)
+- [Executable v0.5 plan](docs/V0.5_EXECUTION_PLAN.md)
+- [Sole-writer and crash recovery issue](https://github.com/manazoid4/agent-nudge/issues/6)
+- [Local control-plane authentication issue](https://github.com/manazoid4/agent-nudge/issues/7)
+- [Release distribution and onboarding issue](https://github.com/manazoid4/agent-nudge/issues/8)
+- [Shadow Mode and Replay Lab issue](https://github.com/manazoid4/agent-nudge/issues/9)
+- [Provider conformance research issue](https://github.com/manazoid4/agent-nudge/issues/10)
+- [Worktree-aware Conflict Escrow issue](https://github.com/manazoid4/agent-nudge/issues/11)
 
 ## Run locally
 
 Requirements: Windows 10/11, Node.js 20 or newer, npm.
 
 ```powershell
-npm install
+npm ci
 npm run test
 npm run test:integration
 npm run build
@@ -60,7 +75,9 @@ npm run package:win
 npm run smoke:release
 ```
 
-The desktop **Run two-agent proof** action checks in live Claude/Codex sessions, creates a five-minute path claim, syncs the recipient, and displays the resulting hold through the production `/v1` path. The public browser demo uses static fixtures and never sends project context anywhere.
+The desktop **Run two-agent proof** action checks in local Claude/Codex-shaped sessions, creates a five-minute path claim, syncs the recipient, and displays the resulting hold through the production `/v1` path. The public browser demo uses static fixtures and never sends project context anywhere.
+
+The current desktop proof writes to the normal local ledger; isolating and cleaning proof state is tracked for v0.5.
 
 ## CLI
 
@@ -114,8 +131,9 @@ The public Vercel site contains marketing and an interactive fixture demo only. 
 - Electron runs with context isolation, sandboxing, and no renderer Node integration.
 - Raw provider payloads are discarded; only allowlisted event metadata can enter the outbox or ledger.
 - Delivery is never labelled as proof that a model “knows” something.
+- Loopback binding is not treated as local-client authentication; that work is tracked in issue #7.
 
-See [docs/SECURITY.md](docs/SECURITY.md), [docs/PROTOCOL.md](docs/PROTOCOL.md), and [docs/WINDOWS-INSTALL.md](docs/WINDOWS-INSTALL.md).
+See [SECURITY.md](SECURITY.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/PROTOCOL.md](docs/PROTOCOL.md), and [docs/WINDOWS-INSTALL.md](docs/WINDOWS-INSTALL.md).
 
 ## Development commands
 
@@ -138,7 +156,17 @@ npm run doctor
 
 ## Known MVP boundaries
 
-The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, and Windows packaging. It does not infer hidden model state, guarantee coverage of every provider action, recover a connector transaction after a hard process termination, synchronize between devices, or replace provider trust and hook controls.
+The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, and Windows packaging.
+
+It does not yet:
+
+- authenticate local API clients;
+- guarantee a sole SQLite writer across all process combinations;
+- recover every connector transaction after hard process termination;
+- guarantee coverage of every provider action;
+- prove a conflict was prevented merely because a BLOCK nudge was delivered or acknowledged;
+- synchronize between devices;
+- replace provider trust and hook controls.
 
 ## License
 

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Agent Nudge — Context before action">
+  <rect width="1200" height="630" fill="#f7faf7"/>
+  <rect x="72" y="72" width="86" height="86" rx="18" fill="#315f44"/>
+  <text x="115" y="130" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800">N↗</text>
+  <text x="190" y="112" fill="#16271d" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="800">Agent Nudge</text>
+  <text x="190" y="145" fill="#56705f" font-family="Consolas, monospace" font-size="17" font-weight="600" letter-spacing="2">CONTEXT ASSURANCE</text>
+  <text x="72" y="286" fill="#14231a" font-family="Segoe UI, Arial, sans-serif" font-size="74" font-weight="850">Two agents.</text>
+  <text x="72" y="374" fill="#14231a" font-family="Segoe UI, Arial, sans-serif" font-size="74" font-weight="850">One repository.</text>
+  <text x="72" y="462" fill="#315f44" font-family="Segoe UI, Arial, sans-serif" font-size="74" font-weight="850">No stale decisions.</text>
+  <rect x="760" y="116" width="360" height="398" rx="16" fill="#111814"/>
+  <circle cx="804" cy="158" r="8" fill="#e66d5d"/>
+  <text x="826" y="164" fill="#f3fff6" font-family="Consolas, monospace" font-size="16" font-weight="700">PRE-ACTION HOLD</text>
+  <text x="800" y="238" fill="#e66d5d" font-family="Consolas, monospace" font-size="15" font-weight="700">EXACT FILE CONFLICT</text>
+  <text x="800" y="292" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">Claude is editing</text>
+  <text x="800" y="334" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">cache.ts</text>
+  <rect x="800" y="382" width="280" height="72" rx="10" fill="#1f2a23" stroke="#435849"/>
+  <text x="822" y="414" fill="#8ff0ad" font-family="Consolas, monospace" font-size="17">src/lib/cache.ts</text>
+  <text x="822" y="440" fill="#a7b6ab" font-family="Segoe UI, Arial, sans-serif" font-size="14">source-backed receipt</text>
+  <text x="72" y="570" fill="#4e6255" font-family="Segoe UI, Arial, sans-serif" font-size="22">Declare · Preflight · Act · Receipt</text>
+</svg>
