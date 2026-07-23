@@ -2,7 +2,7 @@ name: repair Shadow Replay branch
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
     branches:
       - main
 
@@ -28,18 +28,19 @@ jobs:
           path = Path('src/ui/AssurancePage.tsx')
           text = path.read_text()
           if 'href="/replay"' not in text:
-              marker = '''            </a>
-          </div>
-          <div className="assurance-boundary">'''
-              insertion = '''            </a>
+              anchor = 'href="/demo/portfolio"'
+              start = text.find(anchor)
+              if start < 0:
+                  raise SystemExit('Context Mesh anchor not found')
+              close = text.find('</a>', start)
+              if close < 0:
+                  raise SystemExit('Context Mesh closing anchor not found')
+              close += len('</a>')
+              insertion = '''
             <a className="assurance-button secondary" href="/replay">
               <FlaskConical size={17} /> Open Replay Lab
-            </a>
-          </div>
-          <div className="assurance-boundary">'''
-              if marker not in text:
-                  raise SystemExit('Replay Lab insertion marker not found')
-              text = text.replace(marker, insertion, 1)
+            </a>'''
+              text = text[:close] + insertion + text[close:]
           path.write_text(text)
           PY
       - run: npm ci
