@@ -31,16 +31,21 @@ jobs:
           from pathlib import Path
           path = Path('src/ui/AssurancePage.tsx')
           text = path.read_text()
-          old = '''            <a className="assurance-button secondary" href="/demo/portfolio">
-              <Activity size={17} /> Explore the context mesh
-            </a>'''
-          new = old + '''
+          if 'href="/replay"' not in text:
+              if '  FlaskConical,\n' not in text:
+                  text = text.replace('  FileKey2,\n', '  FileKey2,\n  FlaskConical,\n', 1)
+              marker = '''            </a>
+          </div>
+          <div className="assurance-boundary">'''
+              insertion = '''            </a>
             <a className="assurance-button secondary" href="/replay">
               <FlaskConical size={17} /> Open Replay Lab
-            </a>'''
-          if 'href="/replay"' not in text:
-              text = text.replace('  FileKey2,\n', '  FileKey2,\n  FlaskConical,\n', 1)
-              text = text.replace(old, new, 1)
+            </a>
+          </div>
+          <div className="assurance-boundary">'''
+              if marker not in text:
+                  raise SystemExit('Replay Lab insertion marker not found')
+              text = text.replace(marker, insertion, 1)
           path.write_text(text)
           PY
       - run: npm ci
