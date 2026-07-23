@@ -9,6 +9,7 @@ import {
   type ConnectorArtifacts,
   type ConnectorProvider,
 } from "../connectors/index.js";
+import { buildOpenCodePlugin } from "../connectors/opencode-plugin.js";
 import { buildAllScenarios } from "../core/demo.js";
 import { resolveAgentNudgeHome } from "../core/paths.js";
 
@@ -425,7 +426,7 @@ function connectorManager(projectPath: string) {
     "claude-code": { command: command("claude-code") },
     codex: { command: command("codex") },
     opencode: {
-      pluginContent: openCodePlugin(args("opencode")),
+      pluginContent: buildOpenCodePlugin(args("opencode")),
     },
   };
   return new ConnectorManager({ stateDir: resolveAgentNudgeHome(), artifacts });
@@ -433,41 +434,6 @@ function connectorManager(projectPath: string) {
 
 function shellQuote(value: string) {
   return `"${value.replaceAll('"', '\\"')}"`;
-}
-
-function openCodePlugin(hookArgs: string[]) {
-  return `// Owned by Agent Nudge. Remove with: agent-nudge disconnect opencode --apply
-import { execFileSync } from "node:child_process";
-
-const hookArgs = ${JSON.stringify(hookArgs)};
-
-function run(phase, input, output) {
-  try {
-    const stdout = execFileSync("node", [hookArgs[0], hookArgs[1], phase, ...hookArgs.slice(3)], {
-      input: JSON.stringify({ ...input, tool_input: output?.args }),
-      encoding: "utf8",
-      timeout: 1500,
-      windowsHide: true,
-    });
-    return stdout ? JSON.parse(stdout) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export const AgentNudge = async () => ({
-  "tool.execute.before": async (input, output) => {
-    const result = run("pre", input, output);
-    const decision = result?.hookSpecificOutput;
-    if (decision?.permissionDecision === "deny") {
-      throw new Error(decision.permissionDecisionReason || "Agent Nudge found blocking project context.");
-    }
-  },
-  "tool.execute.after": async (input, output) => {
-    run("post", input, output);
-  },
-});
-`;
 }
 
 async function exportData() {
