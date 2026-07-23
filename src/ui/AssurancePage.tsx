@@ -4,6 +4,7 @@ import {
   Bot,
   CheckCircle2,
   FileKey2,
+  FlaskConical,
   GitCompareArrows,
   Github,
   LockKeyhole,

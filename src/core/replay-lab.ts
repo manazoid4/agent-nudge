@@ -105,7 +105,8 @@ export function runDeterministicReplay(
       review: decisions.filter((item) => item.decision === "REVIEW").length,
       hold: decisions.filter((item) => item.decision === "HOLD").length,
       expectations: expected.length,
-      matched: expected.filter((item) => item.matchedExpectation === true).length,
+      matched: expected.filter((item) => item.matchedExpectation === true)
+        .length,
       mismatched: expected.filter((item) => item.matchedExpectation === false)
         .length,
     },

@@ -64,7 +64,11 @@ const events: ReplayEvent[] = [
   },
 ];
 
-function decisionFor(score: number, reviewAt: number, holdAt: number): Decision {
+function decisionFor(
+  score: number,
+  reviewAt: number,
+  holdAt: number,
+): Decision {
   if (score >= holdAt) return "HOLD";
   if (score >= reviewAt) return "REVIEW";
   return "CLEAR";
@@ -123,7 +127,9 @@ export function ReplayLabPage() {
         </div>
         <div className="replay-summary">
           <div>
-            <strong>{matched}/{results.length}</strong>
+            <strong>
+              {matched}/{results.length}
+            </strong>
             <span>labelled outcomes matched</span>
           </div>
           <div>
@@ -131,7 +137,9 @@ export function ReplayLabPage() {
             <span>candidate warnings</span>
           </div>
           <div>
-            <strong>{results.filter((item) => item.decision === "HOLD").length}</strong>
+            <strong>
+              {results.filter((item) => item.decision === "HOLD").length}
+            </strong>
             <span>candidate holds</span>
           </div>
         </div>
@@ -143,8 +151,8 @@ export function ReplayLabPage() {
             <p className="replay-section-label">CANDIDATE POLICY</p>
             <h2>Move the thresholds. Watch every decision update.</h2>
             <p>
-              REVIEW must remain below HOLD. This browser demonstration does
-              not execute agents or write to a repository.
+              REVIEW must remain below HOLD. This browser demonstration does not
+              execute agents or write to a repository.
             </p>
           </div>
           <div className="slider-card">
@@ -217,14 +225,22 @@ export function ReplayLabPage() {
                   <Icon aria-hidden="true" />
                   <span>
                     <strong>{event.title}</strong>
-                    <small>{event.rule} · {event.evidence}</small>
+                    <small>
+                      {event.rule} · {event.evidence}
+                    </small>
                   </span>
                 </div>
                 <b role="cell">{event.score}</b>
-                <span className={`decision ${event.expected.toLowerCase()}`} role="cell">
+                <span
+                  className={`decision ${event.expected.toLowerCase()}`}
+                  role="cell"
+                >
                   {event.expected}
                 </span>
-                <span className={`decision ${event.decision.toLowerCase()}`} role="cell">
+                <span
+                  className={`decision ${event.decision.toLowerCase()}`}
+                  role="cell"
+                >
                   {event.decision}
                   {!matchedExpectation && <em>changed</em>}
                 </span>

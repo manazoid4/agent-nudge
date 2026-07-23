@@ -110,14 +110,13 @@ function replay() {
 function shadowReport() {
   const evaluationsPath = process.argv[3];
   if (!evaluationsPath) {
-    console.error(
-      "Usage: agent-nudge-assure shadow-report <evaluations.json>",
-    );
+    console.error("Usage: agent-nudge-assure shadow-report <evaluations.json>");
     process.exitCode = 2;
     return;
   }
   const input = readJson(evaluationsPath);
-  if (!Array.isArray(input)) throw new Error("shadow_report_input_must_be_array");
+  if (!Array.isArray(input))
+    throw new Error("shadow_report_input_must_be_array");
   const evaluations = input.map((item) => shadowEvaluationSchema.parse(item));
   console.log(JSON.stringify(buildShadowReport(evaluations), null, 2));
 }

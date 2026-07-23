@@ -16,7 +16,10 @@ import {
   parseWorktreePorcelain,
 } from "../../src/core/worktrees.js";
 
-const candidate = (id: string, decision: "CLEAR" | "REVIEW" | "HOLD"): ShadowCandidate => ({
+const candidate = (
+  id: string,
+  decision: "CLEAR" | "REVIEW" | "HOLD",
+): ShadowCandidate => ({
   id,
   projectId: "project-1",
   sessionId: "session-1",
@@ -80,7 +83,10 @@ describe("assurance modes and shadow outcomes", () => {
     );
     const second = evaluateShadowOutcome(
       candidate("candidate-2", "REVIEW"),
-      observation("candidate-2", { humanLabel: "not-useful", falsePositive: true }),
+      observation("candidate-2", {
+        humanLabel: "not-useful",
+        falsePositive: true,
+      }),
     );
     const report = buildShadowReport([first, second]);
     expect(report.conflictsPreventedWithEvidence).toBe(1);

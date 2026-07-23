@@ -37,7 +37,11 @@ export type WorktreeInventory = z.infer<typeof worktreeInventorySchema>;
 
 type ParsedWorktree = Omit<
   WorktreeRecord,
-  "dirty" | "stagedCount" | "unstagedCount" | "untrackedCount" | "changedPathKeys"
+  | "dirty"
+  | "stagedCount"
+  | "unstagedCount"
+  | "untrackedCount"
+  | "changedPathKeys"
 >;
 
 export function parseWorktreePorcelain(output: string): ParsedWorktree[] {
@@ -142,7 +146,14 @@ export function inspectWorktrees(
       });
     const status = spawnSync(
       "git",
-      ["-C", worktree.path, "status", "--porcelain=v1", "-z", "--untracked-files=normal"],
+      [
+        "-C",
+        worktree.path,
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=normal",
+      ],
       {
         encoding: "utf8",
         timeout: 5000,

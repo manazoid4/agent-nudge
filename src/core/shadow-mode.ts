@@ -110,7 +110,7 @@ export function evaluateShadowOutcome(
 
   const preventedConflictKnown = Boolean(
     parsedObservation.conflictPreventedEvidenceRef ||
-      parsedObservation.conflictOccurred === true,
+    parsedObservation.conflictOccurred === true,
   );
   const preventedConflict = Boolean(
     parsedObservation.conflictPreventedEvidenceRef,
@@ -179,9 +179,7 @@ export function buildShadowReport(evaluations: ShadowEvaluation[]) {
       (item) => item.observation.falseNegative === true,
     ),
     bypassed: count((item) => item.observation.bypassed),
-    repeatedWorkAvoided: count(
-      (item) => item.observation.repeatedWorkAvoided,
-    ),
+    repeatedWorkAvoided: count((item) => item.observation.repeatedWorkAvoided),
     usefulLabels: knownUseful.length,
     usefulWarnings: knownUseful.filter((item) => item.useful === true).length,
     usefulnessRate: ratio(
