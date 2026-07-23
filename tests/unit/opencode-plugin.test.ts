@@ -14,9 +14,10 @@ describe("OpenCode connector plugin", () => {
       "project-1",
     ]);
 
-    expect(plugin).toContain('event: async ({ event })');
+    expect(plugin).toContain("event: async ({ event })");
     expect(plugin).toContain('run("auto", event)');
-    for (const event of OPENCODE_OBSERVED_EVENTS) expect(plugin).toContain(event);
+    for (const event of OPENCODE_OBSERVED_EVENTS)
+      expect(plugin).toContain(event);
   });
 
   it("does not subscribe to private message, prompt, shell, or TUI events", () => {
