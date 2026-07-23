@@ -1,0 +1,55 @@
+name: format Shadow Replay branch
+
+on:
+  push:
+    branches:
+      - agent/shadow-replay-worktrees
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-shadow-replay
+  cancel-in-progress: true
+
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, 'format Shadow Replay implementation') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/shadow-replay-worktrees
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Link Assurance page to Replay Lab
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/ui/AssurancePage.tsx')
+          text = path.read_text()
+          old = '''            <a className="assurance-button secondary" href="/demo/portfolio">
+              <Activity size={17} /> Explore the context mesh
+            </a>'''
+          new = old + '''
+            <a className="assurance-button secondary" href="/replay">
+              <FlaskConical size={17} /> Open Replay Lab
+            </a>'''
+          if 'href="/replay"' not in text:
+              text = text.replace('  FileKey2,\n', '  FileKey2,\n  FlaskConical,\n', 1)
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run format
+      - name: Commit formatting changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then exit 0; fi
+          git add docs public src tests
+          git commit -m "style: format Shadow Replay implementation"
+          git push origin HEAD:agent/shadow-replay-worktrees
