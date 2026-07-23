@@ -32,6 +32,39 @@ Every delivered nudge shows its score factors, evidence reference, freshness, re
 
 The v0.2 Context Mesh remains the cross-project read model. V0.3 added the [Live Sync contract](docs/LIVE-SYNC.md); v0.4 adds [reversible Live Connect](docs/LIVE-CONNECT.md). See the [complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
 
+## Assurance core
+
+The OpenCode-first assurance foundation adds provider-neutral primitives that other agent runtimes can adopt without turning Agent Nudge into another coding-agent UI:
+
+- versioned provider capability manifests with `unsupported`, `observed`, `advisory`, and `enforced` levels;
+- effective-capability downgrade when a connector is missing, disabled, untrusted, offline, or drifted;
+- strict OpenCode event normalization for sessions, tool execution, permissions, files, todos, LSP diagnostics, commands, installation, and server state;
+- instruction, rule, skill, agent, plugin, and configuration provenance using hashes rather than stored contents;
+- structured evidence with an explicit provenance ladder;
+- repeated unchanged failure detection requiring an evidence-backed replan;
+- provider-neutral tasks, dependencies, claims, leases, abandonment detection, and structured handoffs;
+- explicit checkpoint coverage and approval-required restore previews;
+- read-only path and `git merge-tree` risk analysis with no automatic merge or deletion.
+
+OpenCode is the reference adapter because its plugin event surface is rich enough to test the complete contract. Claude Code and Codex retain their existing reversible connectors and capability manifests.
+
+### Assurance CLI
+
+```text
+agent-nudge-assure capabilities
+agent-nudge-assure capabilities opencode
+agent-nudge-assure instructions C:\path\to\repo
+agent-nudge-assure merge-risk src/api.ts,package-lock.json src/ui.ts,package-lock.json
+```
+
+The same commands can run from source:
+
+```powershell
+npm run assure -- capabilities opencode
+npm run assure -- instructions C:\path\to\repo
+npm run assure -- merge-risk src/api.ts src/ui.ts
+```
+
 ## Current direction
 
 The next release is reliability, trust, and adoption—not cloud expansion.
@@ -44,6 +77,7 @@ The next release is reliability, trust, and adoption—not cloud expansion.
 - [Shadow Mode and Replay Lab issue](https://github.com/manazoid4/agent-nudge/issues/9)
 - [Provider conformance research issue](https://github.com/manazoid4/agent-nudge/issues/10)
 - [Worktree-aware Conflict Escrow issue](https://github.com/manazoid4/agent-nudge/issues/11)
+- [Competitive feature synthesis and OpenCode-first assurance epic](https://github.com/manazoid4/agent-nudge/issues/13)
 
 ## Run locally
 
@@ -130,6 +164,7 @@ The public Vercel site contains marketing and an interactive fixture demo only. 
 - Project ID scopes every ledger query.
 - Electron runs with context isolation, sandboxing, and no renderer Node integration.
 - Raw provider payloads are discarded; only allowlisted event metadata can enter the outbox or ledger.
+- Instruction provenance records hashes, scope, size, timestamps, provider, and trust state—not file contents.
 - Delivery is never labelled as proof that a model “knows” something.
 - Loopback binding is not treated as local-client authentication; that work is tracked in issue #7.
 
@@ -152,11 +187,12 @@ npm run package:win
 npm run smoke:release
 npm run demo
 npm run doctor
+npm run assure -- capabilities
 ```
 
 ## Known MVP boundaries
 
-The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, and Windows packaging.
+The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, Windows packaging, capability manifests, OpenCode event normalization, instruction provenance, structured evidence, doom-loop assessment, dependency-aware task checks, checkpoint previews, and read-only merge-risk analysis.
 
 It does not yet:
 
@@ -165,6 +201,7 @@ It does not yet:
 - recover every connector transaction after hard process termination;
 - guarantee coverage of every provider action;
 - prove a conflict was prevented merely because a BLOCK nudge was delivered or acknowledged;
+- automatically restore checkpoints, merge branches, or delete worktrees;
 - synchronize between devices;
 - replace provider trust and hook controls.
 
