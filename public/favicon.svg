@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Agent Nudge">
+  <rect width="64" height="64" rx="14" fill="#315f44"/>
+  <path d="M17 45V19h7l16 17V19h7v26h-7L24 28v17z" fill="#f8fff9"/>
+  <path d="M39 13h12v12" fill="none" stroke="#8ff0ad" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m50 14-13 13" fill="none" stroke="#8ff0ad" stroke-width="4" stroke-linecap="round"/>
+</svg>
