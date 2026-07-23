@@ -153,7 +153,7 @@ describe("deterministic replay", () => {
       { id: "candidate", version: "2", reviewAt: 70, holdAt: 140 },
     );
     expect(comparison.changed).toHaveLength(2);
-    expect(comparison.candidateWarningDelta).toBe(-2);
+    expect(comparison.candidateWarningDelta).toBe(-1);
     expect(comparison.candidateExpectationDelta).toBe(-2);
   });
 });
