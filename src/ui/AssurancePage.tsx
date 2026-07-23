@@ -4,6 +4,7 @@ import {
   Bot,
   CheckCircle2,
   FileKey2,
+  FlaskConical,
   GitCompareArrows,
   Github,
   LockKeyhole,
@@ -71,6 +72,9 @@ export function AssurancePage() {
             </a>
             <a className="assurance-button secondary" href="/demo/portfolio">
               <Activity size={17} /> Explore the context mesh
+            </a>
+            <a className="assurance-button secondary" href="/replay">
+              <FlaskConical size={17} /> Open Replay Lab
             </a>
           </div>
           <div className="assurance-boundary">
