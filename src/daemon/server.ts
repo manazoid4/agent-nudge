@@ -30,6 +30,8 @@ import { sanitizeObject } from "../core/redaction.js";
 import { NudgeDatabase } from "../storage/database.js";
 
 export const DEFAULT_PORT = 47831;
+const evidenceStorageKind =
+  "evidence" as Parameters<NudgeDatabase["put"]>[0];
 
 export function createServer(database: NudgeDatabase) {
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
@@ -54,7 +56,10 @@ export function createServer(database: NudgeDatabase) {
     return database.contextPack(query.projectId, query.recipientSessionId);
   });
   app.get("/portfolio", async () => database.portfolioSummary());
-  app.get("/export", async () => database.exportAll());
+  app.get("/export", async () => ({
+    ...database.exportAll(),
+    evidence: database.list<StructuredEvidence>(evidenceStorageKind),
+  }));
   app.get("/purge/preview", async () => database.purgePreview());
   app.get("/v1/capabilities", async () => ({
     schemaVersion: 1,
@@ -68,7 +73,7 @@ export function createServer(database: NudgeDatabase) {
     return {
       schemaVersion: 1,
       projectId,
-      evidence: database.list<StructuredEvidence>("evidence", projectId),
+      evidence: database.list<StructuredEvidence>(evidenceStorageKind, projectId),
     };
   });
 
@@ -306,7 +311,7 @@ export function createServer(database: NudgeDatabase) {
       ? evidenceFromAgentEvent(parsed.data)
       : undefined;
     if (evidence)
-      database.put("evidence", {
+      database.put(evidenceStorageKind, {
         ...evidence,
         createdAt: evidence.observedAt,
       });
