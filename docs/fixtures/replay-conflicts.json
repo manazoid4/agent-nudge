@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "public-conflict-thresholds-v1",
+  "description": "Public-safe assurance scenarios for deterministic threshold evaluation. Contains no prompts, responses, source bodies, or private repository names.",
+  "privacySafe": true,
+  "events": [
+    {
+      "id": "exact-path-active-claim",
+      "sequence": 1,
+      "ruleId": "exact-path-active-claim",
+      "score": 140,
+      "expectedDecision": "HOLD",
+      "labels": ["same-worktree", "exact-path", "active-claim"],
+      "evidenceRefs": ["fixture-claim-receipt"]
+    },
+    {
+      "id": "changed-interface-dependency",
+      "sequence": 2,
+      "ruleId": "changed-interface",
+      "score": 72,
+      "expectedDecision": "REVIEW",
+      "labels": ["dependency", "interface-change"],
+      "evidenceRefs": ["fixture-api-decision"]
+    },
+    {
+      "id": "repeated-failed-approach",
+      "sequence": 3,
+      "ruleId": "doom-loop",
+      "score": 88,
+      "expectedDecision": "REVIEW",
+      "labels": ["repeated-failure", "unchanged-hypothesis"],
+      "evidenceRefs": ["fixture-test-failure"]
+    },
+    {
+      "id": "shared-lockfile",
+      "sequence": 4,
+      "ruleId": "shared-lockfile",
+      "score": 105,
+      "expectedDecision": "HOLD",
+      "labels": ["lockfile", "parallel-edit"],
+      "evidenceRefs": ["fixture-worktree-state"]
+    },
+    {
+      "id": "unrelated-documentation",
+      "sequence": 5,
+      "ruleId": "path-relevance",
+      "score": 12,
+      "expectedDecision": "CLEAR",
+      "labels": ["irrelevant"],
+      "evidenceRefs": []
+    }
+  ]
+}
