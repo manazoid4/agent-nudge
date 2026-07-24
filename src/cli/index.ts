@@ -33,6 +33,10 @@ async function main() {
   if (command === "portfolio") return portfolio();
   if (command === "export") return exportData();
   if (command === "purge") return purgePreview();
+  if (command === "brief" || command === "compile") {
+    const { brief } = await import("./brief.js");
+    return brief();
+  }
   console.error(`Unknown command: ${command}`);
   help();
   process.exitCode = 1;
