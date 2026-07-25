@@ -22,12 +22,31 @@ import {
 } from "../core/schemas.js";
 import type { Nudge } from "../core/schemas.js";
 import { sanitizeObject } from "../core/redaction.js";
+import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { loadProfile } from "../compiler/profile-loader.js";
+import { readRepositoryContext } from "../compiler/repository-reader.js";
+import { resolveConflicts } from "../compiler/resolver.js";
+import { computeDigest } from "../compiler/digest.js";
+import { renderBrief } from "../compiler/renderer.js";
+import { PromptMode, AgentRole, OutputVerbosity, ResolvedContext } from "../compiler/types.js";
+
 import { NudgeDatabase } from "../storage/database.js";
 
 export const DEFAULT_PORT = 47831;
 
 export function createServer(database: NudgeDatabase) {
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
+
+  // Add CORS headers for local UI
+  app.addHook("onRequest", async (req, reply) => {
+    reply.header("Access-Control-Allow-Origin", "*");
+    reply.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    reply.header("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+      reply.send();
+    }
+  });
 
   app.get("/health", async () => ({
     ok: true,
@@ -352,6 +371,65 @@ export function createServer(database: NudgeDatabase) {
     const results = buildAllScenarios();
     results.forEach((result) => database.seedScenario(result));
     return { results, snapshot: database.snapshot("project-agent-nudge") };
+  });
+
+  app.post("/v1/compile", async (request, reply) => {
+    try {
+      const body = request.body as any;
+      const repoPath = body.repo || process.cwd();
+      const mode = (body.mode || "BUILD").toUpperCase() as PromptMode;
+      const agent = (body.agent || "Claude") as AgentRole;
+      const verbosity = (body.verbosity || "standard") as OutputVerbosity;
+      const objective = body.objective || "Complete the task.";
+      
+      let profilePath = resolve(process.cwd(), "config/maz-prompt-profile.json");
+      if (!existsSync(profilePath)) {
+        // Fallback for when running via compiled CJS or different CWD
+        profilePath = resolve(process.cwd(), "../config/maz-prompt-profile.json");
+      }
+
+      const rawRules = loadProfile(profilePath);
+      const applicableRules = rawRules.filter(r => {
+        const matchesAgent = r.applicableAgents.some(a => a === "*" || a.toLowerCase() === agent.toLowerCase());
+        const matchesMode = r.applicableModes.some(m => m === "*" || m.toLowerCase() === mode.toLowerCase());
+        return matchesAgent && matchesMode;
+      });
+
+      const resolvableRules = applicableRules.map(r => {
+        let level: any = "PersonalDefault";
+        if (r.scope === "project") level = "ProjectPreference";
+        if (r.scope === "tool") level = "TaskInstruction"; 
+        return { ...r, resolutionLevel: level };
+      });
+
+      const { activeRules, conflictsSurfaced } = resolveConflicts(resolvableRules);
+      const { sources, skippedSources } = readRepositoryContext(repoPath);
+
+      const context: ResolvedContext = {
+        taskObjective: objective,
+        mode,
+        agent,
+        verbosity,
+        sources,
+        skippedSources,
+        activeRules,
+        conflictsSurfaced,
+        digest: ""
+      };
+
+      context.digest = computeDigest(context);
+      const output = renderBrief(context);
+
+      return {
+        brief: output,
+        digest: context.digest,
+        sources: sources.map(s => ({ path: s.path, type: s.type, digest: s.digest })),
+        skipped: skippedSources,
+        conflicts: conflictsSurfaced
+      };
+    } catch (e: any) {
+      return reply.code(500).send({ error: e.message });
+    }
   });
 
   return app;

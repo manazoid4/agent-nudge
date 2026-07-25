@@ -39,7 +39,8 @@ type View =
   | "agents"
   | "timeline"
   | "rules"
-  | "settings";
+  | "settings"
+  | "compiler";
 
 const endpoint = window.agentNudge?.endpoint ?? "http://127.0.0.1:47831";
 const isDesktop =
@@ -508,6 +509,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
               ["inbox", Inbox, "Nudge inbox"],
               ["agents", Bot, "Live agents"],
               ["timeline", Activity, "Timeline"],
+              ["compiler", Sparkles, "Brief compiler"],
               ["rules", Radar, "Rules"],
               ["settings", Settings, "Settings"],
             ] as const
@@ -576,6 +578,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
         )}
         {view === "agents" && <AgentsView snapshot={snapshot} />}
         {view === "timeline" && <TimelineView snapshot={snapshot} />}
+        {view === "compiler" && <CompilerView />}
         {view === "rules" && <RulesView />}
         {view === "settings" && (
           <SettingsView connected={connected} isPublicDemo={isPublicDemo} />
@@ -1259,3 +1262,220 @@ function relative(date?: string) {
       ? `${minutes}m ago`
       : `${Math.round(minutes / 60)}h ago`;
 }
+
+type CompileResult = {
+  brief: string;
+  digest: string;
+  sources: { path: string; type: string; digest: string }[];
+  skipped: { path: string; reason: string }[];
+  conflicts: { overwrittenId: string; winnerId: string; reason: string }[];
+};
+
+function CompilerView() {
+  const [repo, setRepo] = useState("C:\\Users\\manaz\\Projects\\JobFilterV1");
+  const [objective, setObjective] = useState(
+    "Research the next highest-value product improvements",
+  );
+  const [mode, setMode] = useState("RESEARCH");
+  const [agent, setAgent] = useState("Claude");
+  const [detail, setDetail] = useState("standard");
+  const [result, setResult] = useState<CompileResult | null>(null);
+  const [editedBrief, setEditedBrief] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function generate() {
+    setBusy(true);
+    setError("");
+    setCopied(false);
+    try {
+      const response = await fetch(`${endpoint}/v1/compile`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          repo,
+          objective,
+          mode,
+          agent,
+          verbosity: detail,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error ?? "Compilation failed");
+      }
+      const data = (await response.json()) as CompileResult;
+      setResult(data);
+      setEditedBrief(data.brief);
+    } catch (e: any) {
+      setError(e.message ?? String(e));
+      setResult(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function copyBrief() {
+    void navigator.clipboard.writeText(editedBrief);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <section className="compiler-view">
+      <header className="view-head">
+        <div>
+          <h1>
+            <Sparkles size={20} /> Agent Brief Compiler
+          </h1>
+          <p>
+            Turn a repository + your approved rules + a task into a concise,
+            reusable agent brief. Read-only: compilation never writes to the
+            selected repository.
+          </p>
+        </div>
+      </header>
+
+      <div className="compiler-grid">
+        <div className="compiler-form panel">
+          <label>
+            <span>Repository path</span>
+            <input
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              placeholder="C:\\Users\\you\\Projects\\your-repo"
+            />
+          </label>
+          <label>
+            <span>Task objective</span>
+            <textarea
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              rows={3}
+            />
+          </label>
+          <div className="compiler-selects">
+            <label>
+              <span>Mode</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                {["RESEARCH", "PLAN", "BUILD", "REVIEW", "RESUME"].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Agent</span>
+              <select value={agent} onChange={(e) => setAgent(e.target.value)}>
+                {["Claude", "Codex", "OpenCode", "Grok", "Hermes", "Generic"].map(
+                  (a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              <span>Detail</span>
+              <select
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+              >
+                {["concise", "standard", "detailed"].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button className="button" onClick={generate} disabled={busy}>
+            <Sparkles size={16} />
+            {busy ? "Generating…" : "Generate Brief"}
+          </button>
+          {error && <p className="compiler-error">{error}</p>}
+        </div>
+
+        <div className="compiler-output">
+          {result ? (
+            <>
+              <div className="panel compiler-brief">
+                <div className="compiler-brief-head">
+                  <div>
+                    <strong>Generated brief</strong>
+                    <code>digest {result.digest.substring(0, 12)}</code>
+                  </div>
+                  <button className="button button-small" onClick={copyBrief}>
+                    {copied ? <Check size={15} /> : <FileCode2 size={15} />}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <textarea
+                  className="compiler-brief-body"
+                  value={editedBrief}
+                  onChange={(e) => setEditedBrief(e.target.value)}
+                  rows={20}
+                />
+              </div>
+
+              <div className="panel compiler-sources">
+                <strong>Collected source context</strong>
+                <ul>
+                  {result.sources.map((s) => (
+                    <li key={s.path}>
+                      <span className="source-type">{s.type}</span>
+                      <span className="source-path">
+                        {s.path.split(/[\\/]/).pop()}
+                      </span>
+                      <code>{s.digest.substring(0, 8)}</code>
+                    </li>
+                  ))}
+                </ul>
+                {result.skipped.length > 0 && (
+                  <>
+                    <strong>Skipped</strong>
+                    <ul className="skipped-list">
+                      {result.skipped.map((s) => (
+                        <li key={s.path}>
+                          {s.path.split(/[\\/]/).pop()} — {s.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+
+              {result.conflicts.length > 0 && (
+                <div className="panel compiler-conflicts">
+                  <strong>
+                    <AlertOctagon size={15} /> Conflicts requiring review
+                  </strong>
+                  <ul>
+                    {result.conflicts.map((c, i) => (
+                      <li key={i}>
+                        <code>{c.overwrittenId}</code> vs{" "}
+                        <code>{c.winnerId}</code> — {c.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="panel compiler-empty">
+              <Sparkles size={28} />
+              <p>
+                Fill in a repository, objective, mode and agent, then generate a
+                brief. Sources, digest and any rule conflicts appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+

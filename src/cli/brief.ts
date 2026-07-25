@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import { loadProfile } from "../compiler/profile-loader.js";
 import { readRepositoryContext } from "../compiler/repository-reader.js";
 import { resolveConflicts } from "../compiler/resolver.js";
@@ -13,7 +14,7 @@ export function brief() {
   let agent: AgentRole = "Claude";
   let verbosity: OutputVerbosity = "standard";
   let objective = "Complete the task.";
-  let profilePath = resolve(process.cwd(), "docs/dogfood/maz-prompt-profile.json");
+  let profilePath = resolve(process.cwd(), "config/maz-prompt-profile.json");
 
   // Simple arg parser
   for (let i = 0; i < args.length; i++) {
@@ -23,6 +24,12 @@ export function brief() {
     else if (args[i] === "--detail" && args[i+1]) verbosity = args[++i]! as OutputVerbosity;
     else if (args[i] === "--goal" && args[i+1]) objective = args[++i]!;
     else if (args[i] === "--profile" && args[i+1]) profilePath = args[++i]!;
+  }
+
+  // Fallback to source root config if not found in CWD
+  if (!existsSync(profilePath)) {
+    // In compiled CJS, __dirname is dist-node, so we go up one level.
+    profilePath = resolve(typeof __dirname !== "undefined" ? dirname(__dirname) : process.cwd(), "config/maz-prompt-profile.json");
   }
 
   // 1. Load Profile
@@ -36,8 +43,8 @@ export function brief() {
 
   // Filter rules by agent and mode
   const applicableRules = rawRules.filter(r => {
-    const matchesAgent = r.applicableAgents.includes("*") || r.applicableAgents.includes(agent);
-    const matchesMode = r.applicableModes.includes("*") || r.applicableModes.includes(mode);
+    const matchesAgent = r.applicableAgents.some(a => a === "*" || a.toLowerCase() === agent.toLowerCase());
+    const matchesMode = r.applicableModes.some(m => m === "*" || m.toLowerCase() === mode.toLowerCase());
     return matchesAgent && matchesMode;
   });
 

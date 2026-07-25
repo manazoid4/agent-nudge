@@ -1820,3 +1820,138 @@ h3 {
     transform: none;
   }
 }
+
+.compiler-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.compiler-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.compiler-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.compiler-form input,
+.compiler-form textarea,
+.compiler-form select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.compiler-form textarea {
+  resize: vertical;
+}
+.compiler-selects {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.compiler-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: -5px;
+}
+.compiler-output {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.compiler-brief-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.compiler-brief-head div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.compiler-brief-body {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 15px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+  color: var(--text);
+}
+.compiler-sources ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compiler-sources li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--surface-hover);
+  border-radius: 4px;
+}
+.source-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.source-path {
+  flex: 1;
+}
+.compiler-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  gap: 15px;
+}
+.skipped-list li {
+  color: var(--text-dim);
+  font-style: italic;
+}
+.compiler-conflicts {
+  border-color: #f59e0b;
+}
+.compiler-conflicts strong {
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.compiler-conflicts ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .compiler-grid {
+    grid-template-columns: 1fr;
+  }
+}

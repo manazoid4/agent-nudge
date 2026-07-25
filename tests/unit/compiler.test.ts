@@ -68,6 +68,57 @@ describe("Agent Brief Compiler", () => {
     });
   });
 
+  describe("Regression: Agent and Mode Mapping", () => {
+    it("Claude + RESEARCH maps correctly", () => {
+      const rules: any[] = [
+        { id: "1", title: "Claude Rule", text: "Claude only", applicableAgents: ["Claude"], applicableModes: ["*"], resolutionLevel: "PersonalDefault" },
+        { id: "2", title: "Research Rule", text: "Research only", applicableAgents: ["*"], applicableModes: ["RESEARCH"], resolutionLevel: "PersonalDefault" },
+        { id: "3", title: "Codex Rule", text: "Codex only", applicableAgents: ["Codex"], applicableModes: ["*"], resolutionLevel: "PersonalDefault" }
+      ];
+      
+      const filtered = rules.filter(r => {
+        const matchesAgent = r.applicableAgents.some((a: string) => a === "*" || a.toLowerCase() === "claude");
+        const matchesMode = r.applicableModes.some((m: string) => m === "*" || m.toLowerCase() === "research");
+        return matchesAgent && matchesMode;
+      });
+
+      expect(filtered).toHaveLength(2);
+      expect(filtered.map(r => r.id)).toEqual(["1", "2"]);
+    });
+
+    it("Codex + BUILD maps correctly", () => {
+      const ctx: any = { taskObjective: "Obj", mode: "BUILD", agent: "Codex", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const output = renderBrief(ctx);
+      expect(output).toContain("**Agent:** Codex");
+      expect(output).toContain("**Mode:** BUILD");
+      expect(output).toContain("Build Directives");
+    });
+
+    it("Hermes + RESUME maps correctly", () => {
+      const ctx: any = { taskObjective: "Obj", mode: "RESUME", agent: "Hermes", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const output = renderBrief(ctx);
+      expect(output).toContain("**Agent:** Hermes");
+      expect(output).toContain("**Mode:** RESUME");
+      expect(output).toContain("Resume Directives");
+    });
+
+    it("OpenCode + REVIEW maps correctly", () => {
+      const ctx: any = { taskObjective: "Obj", mode: "REVIEW", agent: "OpenCode", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const output = renderBrief(ctx);
+      expect(output).toContain("**Agent:** OpenCode");
+      expect(output).toContain("**Mode:** REVIEW");
+      expect(output).toContain("Review Directives");
+    });
+
+    it("Grok + PLAN maps correctly", () => {
+      const ctx: any = { taskObjective: "Obj", mode: "PLAN", agent: "Grok", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const output = renderBrief(ctx);
+      expect(output).toContain("**Agent:** Grok");
+      expect(output).toContain("**Mode:** PLAN");
+      expect(output).toContain("Planning Directives");
+    });
+  });
+
   describe("Resolver", () => {
     it("repository rules override personal defaults", () => {
       const rules: any[] = [
