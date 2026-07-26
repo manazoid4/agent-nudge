@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -32,8 +34,18 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Check formatting
-        run: npm run format:check
+      - name: Check formatting on changed files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base" HEAD)
+          if ((${#files[@]})); then
+            npx prettier --check --ignore-unknown "${files[@]}"
+          fi
 
       - name: Lint
         run: npm run lint

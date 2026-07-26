@@ -44,9 +44,19 @@ type View =
   | "agents"
   | "timeline"
   | "rules"
-  | "settings";
+  | "settings"
+  | "compiler";
 
-const endpoint = window.agentNudge?.endpoint ?? "http://127.0.0.1:47831";
+const endpointOverride = new URLSearchParams(location.search).get("endpoint");
+const safeEndpointOverride =
+  endpointOverride &&
+  /^http:\/\/(?:127\.0\.0\.1|localhost):\d{2,5}$/.test(endpointOverride)
+    ? endpointOverride
+    : null;
+const endpoint =
+  safeEndpointOverride ??
+  window.agentNudge?.endpoint ??
+  "http://127.0.0.1:47831";
 const isDesktop =
   Boolean(window.agentNudge) ||
   new URLSearchParams(location.search).has("desktop");
@@ -63,6 +73,7 @@ const dashboardViews: Array<{
   { id: "inbox", icon: Inbox, label: "Nudge inbox" },
   { id: "agents", icon: Bot, label: "Live agents" },
   { id: "timeline", icon: Activity, label: "Timeline" },
+  { id: "compiler", icon: Sparkles, label: "Brief compiler" },
   { id: "rules", icon: Radar, label: "Rules" },
   { id: "settings", icon: Settings, label: "Settings" },
 ];
@@ -105,6 +116,37 @@ export function App() {
 }
 
 function Landing() {
+  const [checkoutError, setCheckoutError] = useState("");
+  const [issuedToken, setIssuedToken] = useState("");
+  const [issuingLicense, setIssuingLicense] = useState(false);
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(location.search).get("session_id");
+    if (!sessionId) return;
+    setIssuingLicense(true);
+    fetch("/api/license", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          token?: string;
+          error?: string;
+        };
+        if (!response.ok || !body.token)
+          throw new Error(body.error ?? "License delivery failed.");
+        setIssuedToken(body.token);
+        history.replaceState(null, "", `${location.pathname}#license`);
+      })
+      .catch((error: unknown) =>
+        setCheckoutError(
+          error instanceof Error ? error.message : String(error),
+        ),
+      )
+      .finally(() => setIssuingLicense(false));
+  }, []);
+
   return (
     <main className="landing">
       <PublicHeader />
@@ -114,13 +156,13 @@ function Landing() {
           <div className="signal-line">
             <span />
             <strong>Live Agent Bridge</strong>
-            <span>v0.4 · reversible connect</span>
+            <span>v0.5 · reversible connect</span>
           </div>
-          <h1>Two agents. One repository. No stale decisions.</h1>
+          <h1>Context assurance for your coding agents.</h1>
           <p className="hero-lede">
-            Agent Nudge gives Claude, Codex, and OpenCode the smallest verified
-            context delta before a consequential action—without copying complete
-            conversations into a shared memory store.
+            Inspect repository rules, catch drift and conflicts, compile a
+            verified brief, then hand it directly to Claude, Codex, or Aider.
+            Local by default. No transcript capture.
           </p>
           <div className="hero-actions">
             <RouteLink className="button" to="/download">
@@ -140,6 +182,36 @@ function Landing() {
         </div>
         <NudgeSpecimen />
       </section>
+
+      {(issuingLicense || issuedToken) && (
+        <section className="license-delivery" id="license" aria-live="polite">
+          <div className="shell">
+            <span>PRO LICENSE</span>
+            <h2>
+              {issuingLicense
+                ? "Verifying payment…"
+                : "Payment verified. Activate Pro."}
+            </h2>
+            {issuedToken && (
+              <>
+                <code>{issuedToken}</code>
+                <button
+                  className="button"
+                  onClick={() =>
+                    void navigator.clipboard.writeText(issuedToken)
+                  }
+                >
+                  Copy signed token
+                </button>
+                <p>
+                  Open Agent Nudge, paste this token into the license panel, and
+                  select Activate.
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="proof-strip" id="proof">
         <div className="shell proof-items">
@@ -258,31 +330,32 @@ function Landing() {
               Revenue is intended to come from controlled coordination across
               people, devices, and systems—not from crippling the local core.
             </p>
+            {checkoutError && (
+              <p className="checkout-error" role="alert">
+                {checkoutError}
+              </p>
+            )}
           </div>
           <div className="price-line">
             <span>Community</span>
-            <strong>£0</strong>
+            <strong>$0</strong>
             <small>Local · private · open core</small>
             <RouteLink to="/download">
               Installation options <ArrowRight size={15} />
             </RouteLink>
           </div>
           <div className="price-line featured">
-            <span>Pro hypothesis</span>
-            <strong>
-              £19<em>/mo</em>
-            </strong>
-            <small>Encrypted sync · rules · history · ROI</small>
+            <span>Founding beta</span>
+            <strong>$29 one-time</strong>
+            <small>Unlimited local repos · 12 months of updates</small>
             <a href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20design%20partner">
-              Become a design partner <ArrowRight size={15} />
+              Join the founding beta <ArrowRight size={15} />
             </a>
           </div>
           <div className="price-line studio">
-            <span>Team hypothesis</span>
-            <strong>
-              £299<em>/mo</em>
-            </strong>
-            <small>Policy · approvals · audit · 10 seats</small>
+            <span>Team — later</span>
+            <strong>Not for sale</strong>
+            <small>Shared policy · approvals · sync · audit</small>
             <RouteLink to="/pricing">
               View packaging <ArrowRight size={15} />
             </RouteLink>
@@ -570,7 +643,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   : "Daemon offline"}
             </span>
           </div>
-          <small>{window.agentNudge?.version ?? "v0.4.0"}</small>
+          <small>{window.agentNudge?.version ?? "v0.5.0"}</small>
         </div>
       </aside>
       <div className="workspace" id="main-workspace">
@@ -629,6 +702,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
         )}
         {view === "agents" && <AgentsView snapshot={snapshot} />}
         {view === "timeline" && <TimelineView snapshot={snapshot} />}
+        {view === "compiler" && <CompilerView isPublicDemo={isPublicDemo} />}
         {view === "rules" && <RulesView />}
         {view === "settings" && (
           <SettingsView connected={connected} isPublicDemo={isPublicDemo} />
@@ -1268,7 +1342,7 @@ function DownloadPage() {
     <PublicPage
       eyebrow="WINDOWS DELIVERY"
       title="Install locally. Verify what you run."
-      lede="Agent Nudge v0.4 has verified Windows installer and portable build receipts. Public release-asset automation is being completed as part of v0.5, so this page never pretends an unavailable binary is ready."
+      lede="Agent Nudge v0.5 beta has verified local Windows installer and portable build receipts. Public code-signed release assets are still pending, so this page never pretends an unavailable binary is ready."
     >
       <div className="public-grid two-column">
         <article className="public-card featured-card">
@@ -1312,9 +1386,10 @@ function DownloadPage() {
         </ol>
       </section>
       <Callout>
-        Current v0.4 limitations include unsigned Windows binaries, fail-open
-        hooks while the daemon is unavailable, and incomplete hard-termination
-        recovery. They are documented rather than hidden.
+        Current v0.5 beta limitations include unsigned Windows binaries, an
+        unauthenticated local control plane, fail-open hooks while the daemon is
+        unavailable, and incomplete hard-termination recovery. They are
+        documented rather than hidden.
       </Callout>
     </PublicPage>
   );
@@ -1455,30 +1530,30 @@ function PricingPage() {
   const plans = [
     {
       name: "Community",
-      price: "£0",
-      text: "Local daemon, desktop inbox, context packs, CLI, MCP, exports, and user-owned adapters.",
+      price: "$0 forever",
+      text: "One active repository, health checks, compiler, redaction, manual copy, and export.",
     },
     {
-      name: "Pro hypothesis",
-      price: "£19/mo",
-      text: "Encrypted personal sync, longer receipt history, cross-device rules, and portfolio ROI.",
+      name: "Founding beta",
+      price: "$29 one-time",
+      text: "The first 100 customers receive Personal features and 12 months of updates in exchange for structured feedback.",
     },
     {
-      name: "Team hypothesis",
-      price: "£299/mo",
-      text: "Shared policy, managed connectors, team context mesh, audit exports, and ten seats.",
+      name: "Personal",
+      price: "$49 one-time",
+      text: "Unlimited local repositories, direct handoffs, custom profiles, three devices, and 12 months of updates.",
     },
     {
-      name: "Business hypothesis",
-      price: "£999/mo",
-      text: "Retention policy, advanced routing, deployment controls, and priority support.",
+      name: "Team",
+      price: "Later",
+      text: "Not for sale until shared policy, identity, encrypted sync, approvals, and audit history create recurring value.",
     },
   ];
   return (
     <PublicPage
       eyebrow="PACKAGING"
-      title="Pay for coordination, not stored noise."
-      lede="The Community product remains useful and private. Paid tiers remain hypotheses until design-partner evidence validates the jobs and willingness to pay."
+      title="Buy the tool. Keep the version."
+      lede="Community remains useful and private. Personal uses desktop-tool economics: one payment, a cardless 14-day trial, and optional paid updates after the included year."
     >
       <div className="public-grid pricing-grid">
         {plans.map((plan) => (
@@ -1490,15 +1565,16 @@ function PricingPage() {
         ))}
       </div>
       <Callout>
-        No billing is implemented in v0.4. Pricing is intentionally labelled as
-        a hypothesis except for the free local Community core.
+        The founding offer remains a validation waitlist until authenticated
+        local control, production key delivery, purchase recovery, and refund
+        tests are green. No card is required for the local trial.
       </Callout>
       <div className="page-actions">
         <a
           className="button"
-          href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20design%20partner"
+          href="mailto:hello@agentnudge.dev?subject=Agent%20Nudge%20founding%20beta"
         >
-          Discuss a design partnership <ArrowRight size={16} />
+          Join the founding beta <ArrowRight size={16} />
         </a>
       </div>
     </PublicPage>
@@ -1514,6 +1590,31 @@ function ChangelogPage() {
     >
       <div className="changelog-list">
         <article>
+          <time>26 July 2026</time>
+          <div>
+            <span>v0.5.0 beta</span>
+            <h2>Context assurance workbench</h2>
+            <p>
+              Repository context health, safe bootstrap, deterministic
+              changelogs, direct Claude/Codex/Aider handoffs, signed local
+              licensing, a cardless 14-day trial, and the commercial-readiness
+              audit.
+            </p>
+          </div>
+        </article>
+        <article>
+          <time>23 July 2026</time>
+          <div>
+            <span>Assurance core</span>
+            <h2>OpenCode evidence and replay foundations</h2>
+            <p>
+              Provider capability manifests, event normalization, instruction
+              provenance, structured evidence, Shadow Mode, Replay Lab, and
+              worktree-aware merge-risk analysis.
+            </p>
+          </div>
+        </article>
+        <article>
           <time>20 July 2026</time>
           <div>
             <span>v0.4.0</span>
@@ -1525,22 +1626,10 @@ function ChangelogPage() {
             </p>
           </div>
         </article>
-        <article>
-          <time>v0.5 target</time>
-          <div>
-            <span>In progress</span>
-            <h2>Reliability, trust, and adoption</h2>
-            <p>
-              Sole-writer ledger, crash recovery, local authentication,
-              corrected outcome metrics, routed public site, installation
-              funnel, and Shadow Mode foundations.
-            </p>
-          </div>
-        </article>
       </div>
       <div className="page-actions">
-        <a className="button" href={`${githubUrl}/commits/main`}>
-          Inspect commits <ExternalLink size={16} />
+        <a className="button" href={`${githubUrl}/blob/main/CHANGELOG.md`}>
+          Read complete changelog <ExternalLink size={16} />
         </a>
         <a className="button secondary" href={`${githubUrl}/issues`}>
           View roadmap issues <ExternalLink size={16} />
@@ -1568,7 +1657,6 @@ function NotFoundPage() {
     </PublicPage>
   );
 }
-
 function PublicPage({
   eyebrow,
   title,
@@ -1817,4 +1905,607 @@ function relative(date?: string) {
     : minutes < 60
       ? `${minutes}m ago`
       : `${Math.round(minutes / 60)}h ago`;
+}
+
+type CompileResult = {
+  brief: string;
+  digest: string;
+  health: ContextHealth;
+  sources: { path: string; type: string; digest: string }[];
+  skipped: { path: string; reason: string }[];
+  conflicts: { overwrittenId: string; winnerId: string; reason: string }[];
+};
+
+type ContextHealth = {
+  repository: {
+    name: string;
+    path: string;
+    branch: string;
+    dirty: boolean;
+    changedFiles: number;
+    stagedFiles: number;
+  };
+  sources: Array<{
+    name: string;
+    present: boolean;
+    lines: number;
+    estimatedTokens: number;
+    digest?: string;
+    drift: string;
+  }>;
+  totals: {
+    lines: number;
+    estimatedTokens: number;
+    tokenBudget: number;
+    budgetUsedPercent: number;
+    changedSources: number;
+  };
+  lastCompiledAt?: string;
+  outputDigest?: string;
+};
+
+type LicenseStatus = {
+  plan: "community" | "trial" | "pro" | "studio";
+  active: boolean;
+  entitlements: string[];
+  expiresAt?: string;
+  trialDaysRemaining?: number;
+  checkoutUrl: string;
+};
+
+type RunnerInfo = {
+  provider: "claude" | "codex" | "aider";
+  executable: string;
+  available: boolean;
+  transport: string;
+};
+
+type RunnerJob = {
+  id: string;
+  provider: string;
+  state: "running" | "completed" | "failed" | "cancelled";
+  output: string;
+  error: string;
+  exitCode?: number;
+};
+
+function CompilerView({ isPublicDemo }: { isPublicDemo: boolean }) {
+  const [repo, setRepo] = useState("C:\\Users\\manaz\\Projects\\agent-nudge");
+  const [objective, setObjective] = useState(
+    "Implement the next highest-value product improvement",
+  );
+  const [mode, setMode] = useState("BUILD");
+  const [agent, setAgent] = useState("Codex");
+  const [detail, setDetail] = useState("standard");
+  const [result, setResult] = useState<CompileResult | null>(null);
+  const [health, setHealth] = useState<ContextHealth | null>(null);
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
+  const [licenseToken, setLicenseToken] = useState("");
+  const [runners, setRunners] = useState<RunnerInfo[]>([]);
+  const [runner, setRunner] = useState<RunnerInfo["provider"]>("codex");
+  const [runJob, setRunJob] = useState<RunnerJob | null>(null);
+  const [changelog, setChangelog] = useState("");
+  const [notice, setNotice] = useState("");
+  const [editedBrief, setEditedBrief] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const request = useCallback(
+    async <T,>(path: string, init?: RequestInit) => {
+      if (isPublicDemo)
+        throw new Error("Open the desktop app to use local tools.");
+      const response = await fetch(`${endpoint}${path}`, init);
+      const body = (await response.json()) as T & { error?: string };
+      if (!response.ok)
+        throw new Error(body.error ?? `Request failed (${response.status})`);
+      return body;
+    },
+    [isPublicDemo],
+  );
+
+  const inspect = useCallback(async () => {
+    setError("");
+    try {
+      const query = new URLSearchParams({ repo, tokenBudget: "16000" });
+      const [healthData, licenseData, runnerData] = await Promise.all([
+        request<ContextHealth>(`/v1/context-health?${query}`),
+        request<LicenseStatus>("/v1/license/status"),
+        request<{ runners: RunnerInfo[] }>("/v1/runners"),
+      ]);
+      setHealth(healthData);
+      setLicense(licenseData);
+      setRunners(runnerData.runners);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }, [repo, request]);
+
+  useEffect(() => {
+    if (!isPublicDemo) void inspect();
+  }, [inspect, isPublicDemo]);
+
+  async function generate() {
+    setBusy(true);
+    setError("");
+    setCopied(false);
+    try {
+      const data = await request<CompileResult>("/v1/compile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          repo,
+          objective,
+          mode,
+          agent,
+          verbosity: detail,
+        }),
+      });
+      setResult(data);
+      setHealth(data.health);
+      setEditedBrief(data.brief);
+      setNotice("Brief compiled and context receipt recorded.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setResult(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function copyBrief() {
+    void navigator.clipboard.writeText(editedBrief);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function bootstrap(apply: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      const plan = await request<{
+        actions: Array<{ relativePath: string; state: string }>;
+      }>("/v1/bootstrap", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ repo, apply }),
+      });
+      const pending = plan.actions.filter(
+        (action) => action.state === "create",
+      );
+      setNotice(
+        apply
+          ? `Initialised ${pending.length} missing context file(s).`
+          : pending.length
+            ? `Ready to create: ${pending.map((action) => action.relativePath).join(", ")}`
+            : "Repository context is already initialised.",
+      );
+      await inspect();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function makeChangelog(apply: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      const data = await request<{ markdown: string; output?: string }>(
+        "/v1/changelog",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            repo,
+            applyPath: apply ? "CHANGELOG.generated.md" : undefined,
+          }),
+        },
+      );
+      setChangelog(data.markdown);
+      setNotice(
+        data.output
+          ? `Changelog written to ${data.output}`
+          : "Changelog preview ready.",
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function activateLicense() {
+    setBusy(true);
+    setError("");
+    try {
+      const status = await request<LicenseStatus>("/v1/license/activate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: licenseToken.trim() }),
+      });
+      setLicense(status);
+      setLicenseToken("");
+      setNotice("Pro license activated on this device.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function launch() {
+    if (!editedBrief) return;
+    setBusy(true);
+    setError("");
+    try {
+      let job = await request<RunnerJob>("/v1/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: runner, repo, brief: editedBrief }),
+      });
+      setRunJob(job);
+      for (
+        let attempts = 0;
+        attempts < 2_400 && job.state === "running";
+        attempts += 1
+      ) {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+        job = await request<RunnerJob>(`/v1/runs/${job.id}`);
+        setRunJob(job);
+      }
+      setNotice(
+        job.state === "completed"
+          ? `${runner} completed with a verified receipt.`
+          : `${runner} stopped with state: ${job.state}.`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="compiler-view industrial-view">
+      <header className="view-head">
+        <div>
+          <h1>
+            <Sparkles size={20} /> Agent Brief Compiler
+          </h1>
+          <p>
+            Inspect context. Compile the smallest useful brief. Send it straight
+            to an installed coding agent.
+          </p>
+        </div>
+      </header>
+
+      <div className="license-strip">
+        <div>
+          <span>LICENSE</span>
+          <strong>
+            {license?.plan ?? (isPublicDemo ? "demo" : "checking")}
+          </strong>
+          <small>
+            {license?.plan === "trial"
+              ? `${license.trialDaysRemaining} Pro trial days remaining`
+              : license?.plan === "community"
+                ? "Core assurance stays free"
+                : "Automation unlocked"}
+          </small>
+        </div>
+        {license?.plan === "community" && (
+          <button
+            className="industrial-button outline"
+            onClick={() =>
+              window.open(
+                "https://agent-nudge-bay.vercel.app/pricing",
+                "_blank",
+              )
+            }
+          >
+            Founder pricing · validation
+          </button>
+        )}
+        <label className="license-entry">
+          <span>Signed license token</span>
+          <input
+            value={licenseToken}
+            onChange={(event) => setLicenseToken(event.target.value)}
+            placeholder="Paste token"
+            type="password"
+          />
+          <button
+            className="industrial-button"
+            disabled={!licenseToken.trim() || busy}
+            onClick={activateLicense}
+          >
+            Activate
+          </button>
+        </label>
+      </div>
+
+      {error && (
+        <p className="compiler-error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="compiler-notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      {health && (
+        <div className="health-board">
+          <div className="health-summary">
+            <div>
+              <span>BRANCH</span>
+              <strong>{health.repository.branch}</strong>
+            </div>
+            <div>
+              <span>WORKTREE</span>
+              <strong>
+                {health.repository.dirty
+                  ? `${health.repository.changedFiles} DIRTY`
+                  : "CLEAN"}
+              </strong>
+            </div>
+            <div>
+              <span>CONTEXT</span>
+              <strong>
+                {health.totals.estimatedTokens.toLocaleString()} TOKENS
+              </strong>
+            </div>
+            <div>
+              <span>BUDGET</span>
+              <strong>{health.totals.budgetUsedPercent}% USED</strong>
+            </div>
+          </div>
+          <div
+            className="health-table"
+            role="table"
+            aria-label="Repository context health"
+          >
+            <div className="health-row health-head" role="row">
+              <span>SOURCE</span>
+              <span>LINES</span>
+              <span>TOKENS</span>
+              <span>DRIFT</span>
+              <span>DIGEST</span>
+            </div>
+            {health.sources.map((source) => (
+              <div className="health-row" role="row" key={source.name}>
+                <strong>{source.name}</strong>
+                <span>{source.present ? source.lines : "—"}</span>
+                <span>
+                  {source.present ? `~${source.estimatedTokens}` : "—"}
+                </span>
+                <span className={`drift drift-${source.drift}`}>
+                  {source.present ? source.drift : "missing"}
+                </span>
+                <code>{source.digest?.slice(0, 8) ?? "--------"}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="compiler-grid">
+        <div className="compiler-form panel">
+          <label>
+            <span>Repository path</span>
+            <input
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              placeholder="C:\\Users\\you\\Projects\\your-repo"
+            />
+          </label>
+          <label>
+            <span>Task objective</span>
+            <textarea
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              rows={3}
+            />
+          </label>
+          <div className="compiler-selects">
+            <label>
+              <span>Mode</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                {["RESEARCH", "PLAN", "BUILD", "REVIEW", "RESUME"].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Agent</span>
+              <select value={agent} onChange={(e) => setAgent(e.target.value)}>
+                {[
+                  "Claude",
+                  "Codex",
+                  "OpenCode",
+                  "Grok",
+                  "Hermes",
+                  "Generic",
+                ].map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Detail</span>
+              <select
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+              >
+                {["concise", "standard", "detailed"].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button className="button" onClick={generate} disabled={busy}>
+            <Sparkles size={16} />
+            {busy ? "Generating…" : "Generate Brief"}
+          </button>
+          <div className="utility-actions">
+            <button onClick={inspect} disabled={busy}>
+              <RefreshCw size={14} /> Inspect
+            </button>
+            <button onClick={() => bootstrap(false)} disabled={busy}>
+              Preview init
+            </button>
+            <button onClick={() => bootstrap(true)} disabled={busy}>
+              Apply init
+            </button>
+          </div>
+        </div>
+
+        <div className="compiler-output">
+          {result ? (
+            <>
+              <div className="panel compiler-brief">
+                <div className="compiler-brief-head">
+                  <div>
+                    <strong>Generated brief</strong>
+                    <code>digest {result.digest.substring(0, 12)}</code>
+                  </div>
+                  <button className="button button-small" onClick={copyBrief}>
+                    {copied ? <Check size={15} /> : <FileCode2 size={15} />}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <textarea
+                  className="compiler-brief-body"
+                  value={editedBrief}
+                  onChange={(e) => setEditedBrief(e.target.value)}
+                  rows={20}
+                />
+                <div className="runner-bar">
+                  <label>
+                    <span>DIRECT HANDOFF</span>
+                    <select
+                      value={runner}
+                      onChange={(event) =>
+                        setRunner(event.target.value as RunnerInfo["provider"])
+                      }
+                    >
+                      {runners.map((item) => (
+                        <option
+                          key={item.provider}
+                          value={item.provider}
+                          disabled={!item.available}
+                        >
+                          {item.provider}{" "}
+                          {item.available ? "ready" : "not installed"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="industrial-button"
+                    onClick={launch}
+                    disabled={
+                      busy ||
+                      !runners.find((item) => item.provider === runner)
+                        ?.available
+                    }
+                  >
+                    <TerminalSquare size={15} /> Launch with brief
+                  </button>
+                </div>
+                {runJob && (
+                  <pre className={`runner-console state-${runJob.state}`}>
+                    {`[${runJob.state}] exit=${runJob.exitCode ?? "-"}\n${runJob.output || runJob.error || "Waiting for output…"}`}
+                  </pre>
+                )}
+              </div>
+
+              <div className="panel compiler-sources">
+                <strong>Collected source context</strong>
+                <ul>
+                  {result.sources.map((s) => (
+                    <li key={s.path}>
+                      <span className="source-type">{s.type}</span>
+                      <span className="source-path">
+                        {s.path.split(/[\\/]/).pop()}
+                      </span>
+                      <code>{s.digest.substring(0, 8)}</code>
+                    </li>
+                  ))}
+                </ul>
+                {result.skipped.length > 0 && (
+                  <>
+                    <strong>Skipped</strong>
+                    <ul className="skipped-list">
+                      {result.skipped.map((s) => (
+                        <li key={s.path}>
+                          {s.path.split(/[\\/]/).pop()} — {s.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+
+              {result.conflicts.length > 0 && (
+                <div className="panel compiler-conflicts">
+                  <strong>
+                    <AlertOctagon size={15} /> Conflicts requiring review
+                  </strong>
+                  <ul>
+                    {result.conflicts.map((c, i) => (
+                      <li key={i}>
+                        <code>{c.overwrittenId}</code> vs{" "}
+                        <code>{c.winnerId}</code> — {c.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="panel compiler-empty">
+              <Sparkles size={28} />
+              <p>
+                Fill in a repository, objective, mode and agent, then generate a
+                brief. Sources, digest and any rule conflicts appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="changelog-workbench">
+        <div>
+          <strong>Automatic changelog</strong>
+          <span>
+            Deterministic Git history. No model call. Preview is free.
+          </span>
+        </div>
+        <div className="utility-actions">
+          <button onClick={() => makeChangelog(false)} disabled={busy}>
+            Preview
+          </button>
+          <button onClick={() => makeChangelog(true)} disabled={busy}>
+            Write CHANGELOG.generated.md
+          </button>
+        </div>
+        <textarea
+          value={changelog}
+          readOnly
+          rows={changelog ? 14 : 4}
+          placeholder="Generate a changelog preview from this repository."
+        />
+      </div>
+    </section>
+  );
 }

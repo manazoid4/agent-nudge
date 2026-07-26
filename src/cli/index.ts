@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import {
@@ -34,6 +34,15 @@ async function main() {
   if (command === "portfolio") return portfolio();
   if (command === "export") return exportData();
   if (command === "purge") return purgePreview();
+  if (command === "health") return contextHealth();
+  if (command === "init" || command === "bootstrap") return bootstrap();
+  if (command === "changelog") return changelog();
+  if (command === "license") return licenseCommand();
+  if (command === "run" || command === "launch") return launchAgent();
+  if (command === "brief" || command === "compile") {
+    const { brief } = await import("./brief.js");
+    return brief();
+  }
   console.error(`Unknown command: ${command}`);
   help();
   process.exitCode = 1;
@@ -65,6 +74,15 @@ Commands:
                             Record receipt of one addressed nudge
   context-pack <project> [session]  Read pre-action context from the daemon
   portfolio                 Show local cross-project context health
+  health [--repo PATH]      Inspect agent context files, drift, and token budget
+  init [--repo PATH] [--apply]
+                            Create missing AGENTS.md, CLAUDE.md, and local rules
+  changelog [--repo PATH] [--since REF] [--to REF] [--apply PATH]
+                            Generate a deterministic developer changelog
+  license [status|activate|deactivate] [TOKEN]
+                            Manage the local signed Pro license
+  run <claude|codex|aider> --repo PATH --brief-file PATH
+                            Launch an installed agent with a compiled brief
   export [path]             Export local ledger as JSON
   purge --preview           Show what would be removed
   help                      Show this help
@@ -434,6 +452,131 @@ function connectorManager(projectPath: string) {
 
 function shellQuote(value: string) {
   return `"${value.replaceAll('"', '\\"')}"`;
+}
+
+async function contextHealth() {
+  const options = parseUtilityArgs(process.argv.slice(3));
+  const { inspectContextHealth } = await import("../context-health/index.js");
+  console.log(
+    JSON.stringify(
+      inspectContextHealth(
+        options.repo,
+        undefined,
+        options.tokenBudget ? Number(options.tokenBudget) : undefined,
+      ),
+      null,
+      2,
+    ),
+  );
+}
+
+async function bootstrap() {
+  const options = parseUtilityArgs(process.argv.slice(3));
+  const { bootstrapRepository } = await import("../onboarding/bootstrap.js");
+  console.log(
+    JSON.stringify(bootstrapRepository(options.repo, options.apply), null, 2),
+  );
+}
+
+async function changelog() {
+  const options = parseUtilityArgs(process.argv.slice(3));
+  const { generateChangelog } = await import("../changelog/index.js");
+  const result = generateChangelog({
+    repoPath: options.repo,
+    since: options.since,
+    to: options.to,
+    applyPath: options.applyPath,
+  });
+  console.log(result.markdown);
+  if (result.output) console.error(`Wrote ${result.output}`);
+}
+
+async function licenseCommand() {
+  const action = process.argv[3] ?? "status";
+  const { LicenseService } = await import("../licensing/index.js");
+  const service = new LicenseService({
+    statePath: join(resolveAgentNudgeHome(), "license.json"),
+  });
+  if (action === "status") {
+    console.log(JSON.stringify(service.status(), null, 2));
+    return;
+  }
+  if (action === "activate") {
+    const token = process.argv[4];
+    if (!token) throw new Error("Usage: agent-nudge license activate <token>");
+    console.log(JSON.stringify(service.activate(token), null, 2));
+    return;
+  }
+  if (action === "deactivate") {
+    console.log(JSON.stringify(service.deactivate(), null, 2));
+    return;
+  }
+  throw new Error(`Unknown license action: ${action}`);
+}
+
+async function launchAgent() {
+  const provider = process.argv[3];
+  if (!provider || !["claude", "codex", "aider"].includes(provider))
+    throw new Error(
+      "Usage: agent-nudge run <claude|codex|aider> --repo PATH --brief-file PATH",
+    );
+  const options = parseUtilityArgs(process.argv.slice(4));
+  if (!options.briefFile) throw new Error("run_requires_--brief-file");
+  const brief = readFileSync(resolve(options.briefFile), "utf8");
+  const started = (await postJson("/v1/runs", {
+    provider,
+    repo: options.repo,
+    brief,
+  })) as { id: string; state: string };
+  let job = started;
+  while (job.state === "running") {
+    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+    const response = await fetch(`${endpoint}/v1/runs/${started.id}`, {
+      signal: AbortSignal.timeout(1_500),
+    });
+    if (!response.ok) throw new Error(`Runner read failed: ${response.status}`);
+    job = (await response.json()) as typeof started;
+  }
+  console.log(JSON.stringify(job, null, 2));
+}
+
+function parseUtilityArgs(args: string[]) {
+  const options: {
+    repo: string;
+    apply: boolean;
+    applyPath?: string;
+    since?: string;
+    to?: string;
+    briefFile?: string;
+    tokenBudget?: string;
+  } = { repo: process.cwd(), apply: false };
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    if (!value) continue;
+    const next = args[index + 1];
+    if (value === "--apply") {
+      options.apply = true;
+      if (next && !next.startsWith("--")) {
+        options.applyPath = next;
+        index += 1;
+      }
+      continue;
+    }
+    const keyMap: Record<string, keyof typeof options> = {
+      "--repo": "repo",
+      "--since": "since",
+      "--to": "to",
+      "--brief-file": "briefFile",
+      "--token-budget": "tokenBudget",
+    };
+    const key = keyMap[value];
+    if (!key || !next) throw new Error(`Invalid utility argument: ${value}`);
+    (options as Record<string, string | boolean | undefined>)[key] = next;
+    index += 1;
+  }
+  if (options.apply && !options.applyPath && command === "changelog")
+    options.applyPath = "CHANGELOG.md";
+  return options;
 }
 
 async function exportData() {

@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import Fastify, { type FastifyReply } from "fastify";
 import { z } from "zod";
+import { generateChangelog } from "../changelog/index.js";
+import {
+  createContextReceipt,
+  inspectContextHealth,
+  repositoryKey,
+  type ContextReceipt,
+} from "../context-health/index.js";
 import { listProviderCapabilities } from "../core/capabilities.js";
 import {
   buildAllScenarios,
@@ -27,21 +35,209 @@ import {
 } from "../core/schemas.js";
 import type { Nudge } from "../core/schemas.js";
 import { sanitizeObject } from "../core/redaction.js";
+import { resolveAgentNudgeHome } from "../core/paths.js";
+import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { loadProfile } from "../compiler/profile-loader.js";
+import { readRepositoryContext } from "../compiler/repository-reader.js";
+import { resolveConflicts } from "../compiler/resolver.js";
+import { computeDigest } from "../compiler/digest.js";
+import { renderBrief } from "../compiler/renderer.js";
+import type {
+  PromptMode,
+  AgentRole,
+  OutputVerbosity,
+  ResolvedContext,
+} from "../compiler/types.js";
+import { LicenseService } from "../licensing/index.js";
+import { bootstrapRepository } from "../onboarding/bootstrap.js";
+import { RunnerService, type RunnerProvider } from "../runners/service.js";
+
 import { NudgeDatabase } from "../storage/database.js";
 
 export const DEFAULT_PORT = 47831;
+const runnerRequestSchema = z.object({
+  provider: z.enum(["claude", "codex", "aider"]) as z.ZodType<RunnerProvider>,
+  repo: z.string().min(1).max(2_048),
+  brief: z
+    .string()
+    .min(1)
+    .max(256 * 1024),
+});
 const evidenceStorageKind = "evidence" as Parameters<NudgeDatabase["put"]>[0];
 
-export function createServer(database: NudgeDatabase) {
+export function createServer(
+  database: NudgeDatabase,
+  services: {
+    license?: LicenseService;
+    runners?: RunnerService;
+  } = {},
+) {
+  const license =
+    services.license ??
+    new LicenseService({
+      statePath: join(resolveAgentNudgeHome(), "license.json"),
+    });
+  const runners = services.runners ?? new RunnerService();
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
+
+  const allowedOrigins = new Set([
+    "null",
+    "http://127.0.0.1:4173",
+    "http://localhost:4173",
+  ]);
+  app.addHook("onRequest", async (req, reply) => {
+    const origin = req.headers.origin;
+    if (origin && !allowedOrigins.has(origin)) {
+      return reply.code(403).send({ error: "origin_not_allowed" });
+    }
+    if (origin) reply.header("Access-Control-Allow-Origin", origin);
+    reply.header("Vary", "Origin");
+    reply.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    reply.header("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+      return reply.code(204).send();
+    }
+  });
 
   app.get("/health", async () => ({
     ok: true,
     service: "agent-nudge",
-    version: "0.4.0",
+    version: "0.5.0",
     localOnly: true,
     at: new Date().toISOString(),
   }));
+  app.get("/v1/license/status", async () => license.status());
+  app.post("/v1/license/activate", async (request, reply) => {
+    const parsed = z
+      .object({ token: z.string().min(32).max(16_384) })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_license_token" });
+    try {
+      return license.activate(parsed.data.token);
+    } catch (error) {
+      return reply.code(400).send({ error: errorMessage(error) });
+    }
+  });
+  app.post("/v1/license/deactivate", async () => license.deactivate());
+
+  app.get("/v1/context-health", async (request, reply) => {
+    const parsed = z
+      .object({
+        repo: z.string().min(1).max(2_048),
+        tokenBudget: z.coerce
+          .number()
+          .int()
+          .min(1_000)
+          .max(2_000_000)
+          .optional(),
+      })
+      .safeParse(request.query);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_context_health_query" });
+    try {
+      const key = repositoryKey(parsed.data.repo);
+      const receipt = database.getSetting<ContextReceipt>(
+        `compiler-receipt:${key}`,
+      );
+      return inspectContextHealth(
+        parsed.data.repo,
+        receipt,
+        parsed.data.tokenBudget,
+      );
+    } catch (error) {
+      return reply.code(400).send({ error: errorMessage(error) });
+    }
+  });
+
+  app.post("/v1/bootstrap", async (request, reply) => {
+    const parsed = z
+      .object({
+        repo: z.string().min(1).max(2_048),
+        apply: z.boolean().default(false),
+      })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_bootstrap_request" });
+    try {
+      return bootstrapRepository(parsed.data.repo, parsed.data.apply);
+    } catch (error) {
+      return reply.code(400).send({ error: errorMessage(error) });
+    }
+  });
+
+  app.post("/v1/changelog", async (request, reply) => {
+    const parsed = z
+      .object({
+        repo: z.string().min(1).max(2_048),
+        since: z.string().min(1).max(240).optional(),
+        to: z.string().min(1).max(240).optional(),
+        applyPath: z.string().min(1).max(1_024).optional(),
+      })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_changelog_request" });
+    try {
+      if (parsed.data.applyPath) license.require("changelog_write");
+      return generateChangelog({
+        repoPath: parsed.data.repo,
+        since: parsed.data.since,
+        to: parsed.data.to,
+        applyPath: parsed.data.applyPath,
+      });
+    } catch (error) {
+      return sendProductError(reply, error);
+    }
+  });
+
+  app.get("/v1/runners", async () => ({ runners: runners.list() }));
+  app.post("/v1/runs/preview", async (request, reply) => {
+    const parsed = runnerRequestSchema
+      .omit({ brief: true })
+      .safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_runner_preview" });
+    try {
+      return runners.preview(parsed.data.provider, parsed.data.repo);
+    } catch (error) {
+      return sendProductError(reply, error);
+    }
+  });
+  app.post("/v1/runs", async (request, reply) => {
+    const parsed = runnerRequestSchema.safeParse(sanitizeObject(request.body));
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_runner_request" });
+    try {
+      license.require("agent_launch");
+      return reply
+        .code(202)
+        .send(
+          runners.start(
+            parsed.data.provider,
+            parsed.data.repo,
+            parsed.data.brief,
+          ),
+        );
+    } catch (error) {
+      return sendProductError(reply, error);
+    }
+  });
+  app.get("/v1/runs/:id", async (request, reply) => {
+    try {
+      return runners.get((request.params as { id: string }).id);
+    } catch (error) {
+      return sendProductError(reply, error);
+    }
+  });
+  app.post("/v1/runs/:id/cancel", async (request, reply) => {
+    try {
+      license.require("agent_launch");
+      return runners.cancel((request.params as { id: string }).id);
+    } catch (error) {
+      return sendProductError(reply, error);
+    }
+  });
   app.get("/snapshot", async (request) =>
     database.snapshot((request.query as { projectId?: string }).projectId),
   );
@@ -391,6 +587,84 @@ export function createServer(database: NudgeDatabase) {
     return { results, snapshot: database.snapshot("project-agent-nudge") };
   });
 
+  app.post("/v1/compile", async (request, reply) => {
+    try {
+      const body = request.body as any;
+      const repoPath = body.repo || process.cwd();
+      const mode = (body.mode || "BUILD").toUpperCase() as PromptMode;
+      const agent = (body.agent || "Claude") as AgentRole;
+      const verbosity = (body.verbosity || "standard") as OutputVerbosity;
+      const objective = body.objective || "Complete the task.";
+
+      let profilePath = resolve(
+        process.cwd(),
+        "config/maz-prompt-profile.json",
+      );
+      if (!existsSync(profilePath)) {
+        // Fallback for when running via compiled CJS or different CWD
+        profilePath = resolve(
+          process.cwd(),
+          "../config/maz-prompt-profile.json",
+        );
+      }
+
+      const rawRules = loadProfile(profilePath);
+      const applicableRules = rawRules.filter((r) => {
+        const matchesAgent = r.applicableAgents.some(
+          (a) => a === "*" || a.toLowerCase() === agent.toLowerCase(),
+        );
+        const matchesMode = r.applicableModes.some(
+          (m) => m === "*" || m.toLowerCase() === mode.toLowerCase(),
+        );
+        return matchesAgent && matchesMode;
+      });
+
+      const resolvableRules = applicableRules.map((r) => {
+        let level: any = "PersonalDefault";
+        if (r.scope === "project") level = "ProjectPreference";
+        if (r.scope === "tool") level = "TaskInstruction";
+        return { ...r, resolutionLevel: level };
+      });
+
+      const { activeRules, conflictsSurfaced } =
+        resolveConflicts(resolvableRules);
+      const { sources, skippedSources } = readRepositoryContext(repoPath);
+
+      const context: ResolvedContext = {
+        taskObjective: objective,
+        mode,
+        agent,
+        verbosity,
+        sources,
+        skippedSources,
+        activeRules,
+        conflictsSurfaced,
+        digest: "",
+      };
+
+      context.digest = computeDigest(context);
+      const output = renderBrief(context);
+      const health = inspectContextHealth(repoPath);
+      const receipt = createContextReceipt(health, context.digest);
+      database.setSetting(`compiler-receipt:${receipt.repoKey}`, receipt);
+
+      return {
+        brief: output,
+        digest: context.digest,
+        health: inspectContextHealth(repoPath, receipt),
+        sources: sources.map((s) => ({
+          path: s.path,
+          type: s.type,
+          digest: s.digest,
+        })),
+        skipped: skippedSources,
+        conflicts: conflictsSurfaced,
+      };
+    } catch (e: any) {
+      return reply.code(500).send({ error: e.message });
+    }
+  });
+
   return app;
 }
 
@@ -402,4 +676,20 @@ function sendLiveSyncError(reply: FastifyReply, error: unknown) {
       ? 403
       : 409;
   return reply.code(status).send({ error: code });
+}
+
+function sendProductError(reply: FastifyReply, error: unknown) {
+  const code = errorMessage(error);
+  const status = code.startsWith("pro_required:")
+    ? 402
+    : code.endsWith("_not_found")
+      ? 404
+      : code.startsWith("runner_unavailable:")
+        ? 409
+        : 400;
+  return reply.code(status).send({ error: code });
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }

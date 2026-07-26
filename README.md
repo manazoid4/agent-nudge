@@ -1,14 +1,16 @@
 # Agent Nudge
 
-**Two agents. One repository. No stale decisions.** Agent Nudge is a local-first Windows preflight and receipt layer for AI coding agents. It shares structured execution state—not full transcripts—routes the smallest useful context delta, and records acknowledgement separately from delivery.
+**Context assurance for your coding agents.** Agent Nudge is a local-first Windows preflight and receipt layer for Claude, Codex, OpenCode, and Aider. It inspects repository rules, catches drift and conflicts, compiles the smallest useful brief, and records acknowledgement separately from delivery.
 
 ![Agent Nudge status](https://img.shields.io/badge/status-Windows_MVP-79d99a) ![Privacy](https://img.shields.io/badge/privacy-local--first-173d2a) ![License](https://img.shields.io/badge/license-MIT-black)
 
 [Website](https://agent-nudge-bay.vercel.app/) · [Interactive recorded scenario](https://agent-nudge-bay.vercel.app/demo/overview) · [Download options](https://agent-nudge-bay.vercel.app/download) · [Documentation](https://agent-nudge-bay.vercel.app/docs) · [Security](https://agent-nudge-bay.vercel.app/security) · [Changelog](https://agent-nudge-bay.vercel.app/changelog)
 
+[Read the changelog](CHANGELOG.md)
+
 ## Live product proof
 
-V0.4 closes the real coordination loop without calling a model API:
+V0.5 closes the coordination loop and adds the commercial utility layer without calling a model API:
 
 ```text
 agent check-in + task intent
@@ -31,6 +33,8 @@ The public browser experience is an interactive recorded scenario using public-s
 Every delivered nudge shows its score factors, evidence reference, freshness, recipient, state, and reason for arriving now.
 
 The v0.2 Context Mesh remains the cross-project read model. V0.3 added the [Live Sync contract](docs/LIVE-SYNC.md); v0.4 adds [reversible Live Connect](docs/LIVE-CONNECT.md). See the [complete 19-repository synthesis](docs/PORTFOLIO-SYNTHESIS.md) and [context pack contract](docs/CONTEXT-PACKS.md).
+
+V0.5 adds repository context health, safe two-second bootstrap, deterministic changelogs, direct Claude/Codex/Aider handoffs, and signed local licensing. Commercial packaging remains under validation; the local assurance core stays useful for free.
 
 ## Assurance core
 
@@ -132,6 +136,14 @@ agent-nudge publish project-id claude-1 decision "Cache API changed" "Await cach
 agent-nudge acknowledge project-id codex-1 nudge-id
 agent-nudge context-pack project-agent-nudge codex-session-id
 agent-nudge portfolio
+agent-nudge health --repo C:\path\to\repo
+agent-nudge init --repo C:\path\to\repo
+agent-nudge init --repo C:\path\to\repo --apply
+agent-nudge changelog --repo C:\path\to\repo
+agent-nudge changelog --repo C:\path\to\repo --apply CHANGELOG.generated.md
+agent-nudge license status
+agent-nudge license activate SIGNED_TOKEN
+agent-nudge run codex --repo C:\path\to\repo --brief-file brief.md
 agent-nudge export [output.json]
 agent-nudge purge --preview
 ```
@@ -155,6 +167,8 @@ Claude / Codex / OpenCode task intent
 ```
 
 The public Vercel site contains marketing and an interactive fixture demo only. The local daemon, SQLite database, and project context are not deployed.
+
+Hosted checkout uses the server-only variables documented in [.env.example](.env.example). Checkout remains a validation path until local API authentication, purchase recovery, refunds, and the production Ed25519 keypair pass end-to-end release tests. Desktop clients verify signed tokens with the matching public key; the payment server never receives repository context.
 
 ## Privacy and security
 
@@ -192,7 +206,7 @@ npm run assure -- capabilities
 
 ## Known MVP boundaries
 
-The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, UI, Windows packaging, capability manifests, OpenCode event normalization, instruction provenance, structured evidence, doom-loop assessment, dependency-aware task checks, checkpoint previews, and read-only merge-risk analysis.
+The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, compiler receipts, context drift, signed licensing, allowlisted local runner processes, UI, Windows packaging, capability manifests, OpenCode event normalization, instruction provenance, structured evidence, doom-loop assessment, dependency-aware task checks, checkpoint previews, and read-only merge-risk analysis.
 
 It does not yet:
 
