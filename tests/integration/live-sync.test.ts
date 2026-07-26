@@ -161,11 +161,16 @@ describe("v1 live sync loop", () => {
 
     const acknowledged = await app.inject({
       method: "POST",
-      url: `/v1/nudges/${decisionNudge.id}/acknowledge`,
-      payload: { projectId: "project-live", sessionId: "codex-one" },
+      url: `/v1/nudges/${decisionNudge.id}/receipts/acknowledge`,
+      payload: {
+        projectId: "project-live",
+        sessionId: "codex-one",
+        clientId: "live-sync-test",
+        idempotencyKey: "live-sync-acknowledgement-0001",
+      },
     });
-    expect(acknowledged.statusCode).toBe(200);
-    expect(acknowledged.json()).toMatchObject({ state: "acknowledged" });
+    expect(acknowledged.statusCode).toBe(201);
+    expect(acknowledged.json().nudge).toMatchObject({ state: "acknowledged" });
 
     const otherProject = (
       await app.inject({
@@ -302,7 +307,7 @@ describe("v1 live sync loop", () => {
     });
     expect(
       JSON.parse((acknowledged.content as Array<{ text: string }>)[0]!.text)
-        .state,
+        .nudge.state,
     ).toBe("acknowledged");
   });
 });

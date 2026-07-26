@@ -13,7 +13,7 @@ import {
 } from "../core/live-sync.js";
 import { buildPortfolioSummary } from "../core/portfolio.js";
 import type {
-  AcknowledgeRequest,
+  FeedbackReceipt,
   AgentEvent,
   AgentSession,
   ChangeLogEntry,
@@ -23,6 +23,8 @@ import type {
   Nudge,
   PathClaim,
   PublishFactInput,
+  ReceiptAction,
+  ReceiptRequest,
   ReleaseClaimRequest,
   SyncRequest,
   SyncResponse,
@@ -39,6 +41,36 @@ type StoredKind =
   | "feedback"
   | "manifests";
 
+function receiptId(input: ReceiptRequest) {
+  return `receipt-${createHash("sha256")
+    .update(
+      JSON.stringify([input.projectId, input.clientId, input.idempotencyKey]),
+    )
+    .digest("hex")}`;
+}
+
+function receiptStorageKey(input: ReceiptRequest) {
+  return receiptId(input);
+}
+
+function sameReceiptRequest(receipt: FeedbackReceipt, input: ReceiptRequest) {
+  return (
+    receipt.projectId === input.projectId &&
+    receipt.nudgeId === input.nudgeId &&
+    receipt.sessionId === input.sessionId &&
+    receipt.action === input.action &&
+    receipt.clientId === input.clientId &&
+    receipt.idempotencyKey === input.idempotencyKey &&
+    receipt.reason === input.reason &&
+    (input.action !== "snooze" || receipt.snoozeMinutes === input.snoozeMinutes)
+  );
+}
+
+function receiptState(action: ReceiptAction): Nudge["state"] {
+  if (action === "snooze") return "snoozed";
+  if (["dismiss", "wrong", "stale"].includes(action)) return "dismissed";
+  return "acknowledged";
+}
 export class NudgeDatabase {
   private readonly db: DatabaseSync;
 
@@ -135,8 +167,10 @@ export class NudgeDatabase {
       startedAt?: string;
       at?: string;
       idempotencyKey?: string;
+      storageIdempotencyKey?: string;
     },
   ) {
+    const { storageIdempotencyKey, ...payload } = value;
     const statement = this.db.prepare(`
       INSERT INTO records(kind, id, project_id, state, created_at, idempotency_key, payload)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -154,8 +188,8 @@ export class NudgeDatabase {
         value.startedAt ??
         value.at ??
         new Date().toISOString(),
-      value.idempotencyKey ?? null,
-      JSON.stringify(value),
+      storageIdempotencyKey ?? value.idempotencyKey ?? null,
+      JSON.stringify(payload),
     );
     return value;
   }
@@ -479,25 +513,91 @@ export class NudgeDatabase {
     );
   }
 
-  acknowledge(input: AcknowledgeRequest, now = new Date()) {
-    this.requireSession(input.projectId, input.sessionId);
-    const nudge = this.get<Nudge>("nudges", input.nudgeId);
-    if (!nudge || nudge.projectId !== input.projectId)
-      throw new Error("nudge_not_found");
-    if (nudge.recipientSessionId !== input.sessionId)
-      throw new Error("nudge_not_owned");
-    const updated = this.updateNudge(input.nudgeId, {
-      state: "acknowledged",
-      acknowledgedAt: now.toISOString(),
-    });
-    this.appendChange(
-      input.projectId,
-      "nudge",
-      input.nudgeId,
-      "acknowledged",
-      now.toISOString(),
-    );
-    return updated;
+  recordReceipt(input: ReceiptRequest, now = new Date()) {
+    const id = receiptId(input);
+    let transactionOpen = false;
+    try {
+      this.db.exec("BEGIN IMMEDIATE");
+      transactionOpen = true;
+
+      const session = this.requireSession(input.projectId, input.sessionId);
+      if (!isSessionPresent(session, now))
+        throw new Error("session_not_active");
+      const nudge = this.get<Nudge>("nudges", input.nudgeId);
+      if (!nudge || nudge.projectId !== input.projectId)
+        throw new Error("nudge_not_found");
+      if (nudge.recipientSessionId !== input.sessionId)
+        throw new Error("nudge_not_owned");
+
+      const existing = this.get<FeedbackReceipt>("feedback", id);
+      if (existing) {
+        if (!sameReceiptRequest(existing, input))
+          throw new Error("receipt_replay_mismatch");
+        this.db.exec("COMMIT");
+        transactionOpen = false;
+        return { receipt: existing, nudge, replayed: true as const };
+      }
+
+      if (
+        !["queued", "delivered", "snoozed"].includes(nudge.state) ||
+        Date.parse(nudge.expiresAt) <= now.getTime()
+      )
+        throw new Error("invalid_nudge_transition");
+
+      const at = now.toISOString();
+      const state = receiptState(input.action);
+      const snoozedUntil =
+        input.action === "snooze"
+          ? new Date(now.getTime() + input.snoozeMinutes * 60_000).toISOString()
+          : undefined;
+      const updated: Nudge = {
+        ...nudge,
+        state,
+        acknowledgedAt: state === "acknowledged" ? at : nudge.acknowledgedAt,
+        snoozedUntil,
+        dismissedReason:
+          state === "dismissed"
+            ? (input.reason ?? input.action)
+            : nudge.dismissedReason,
+      };
+      const receipt: FeedbackReceipt = {
+        id,
+        schemaVersion: 1,
+        projectId: input.projectId,
+        nudgeId: input.nudgeId,
+        sessionId: input.sessionId,
+        action: input.action,
+        clientId: input.clientId,
+        idempotencyKey: input.idempotencyKey,
+        reason: input.reason,
+        at,
+        stateAfter: state,
+        snoozedUntil,
+        snoozeMinutes:
+          input.action === "snooze" ? input.snoozeMinutes : undefined,
+      };
+
+      this.put("nudges", updated);
+      this.put("feedback", {
+        ...receipt,
+        storageIdempotencyKey: receiptStorageKey(input),
+      });
+      this.appendChange(
+        input.projectId,
+        "nudge",
+        input.nudgeId,
+        `receipt_${input.action}`,
+        at,
+      );
+      this.db.exec("COMMIT");
+      transactionOpen = false;
+      return { receipt, nudge: updated, replayed: false as const };
+    } catch (error) {
+      if (transactionOpen) this.db.exec("ROLLBACK");
+      if (String(error).includes("UNIQUE constraint failed"))
+        throw new Error("receipt_persistence_conflict");
+      throw error;
+    }
   }
 
   sync(input: SyncRequest, now = new Date()): SyncResponse {

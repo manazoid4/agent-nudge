@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -239,10 +239,15 @@ async function acknowledge() {
   }
   console.log(
     JSON.stringify(
-      await postJson(`/v1/nudges/${encodeURIComponent(nudgeId)}/acknowledge`, {
-        projectId,
-        sessionId,
-      }),
+      await postJson(
+        `/v1/nudges/${encodeURIComponent(nudgeId)}/receipts/acknowledge`,
+        {
+          projectId,
+          sessionId,
+          clientId: "cli",
+          idempotencyKey: randomUUID(),
+        },
+      ),
       null,
       2,
     ),

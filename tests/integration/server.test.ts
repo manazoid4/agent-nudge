@@ -35,12 +35,24 @@ describe("localhost API", () => {
     const demo = (
       await app.inject({ method: "POST", url: "/demo/conflict" })
     ).json();
-    const response = await app.inject({
+    const legacy = await app.inject({
       method: "POST",
       url: `/nudges/${demo.nudge.id}/action`,
       payload: { action: "acknowledge" },
     });
-    expect(response.json()).toMatchObject({ state: "acknowledged" });
+    expect(legacy.statusCode).toBe(410);
+    const response = await app.inject({
+      method: "POST",
+      url: `/v1/nudges/${demo.nudge.id}/receipts/acknowledge`,
+      payload: {
+        projectId: demo.nudge.projectId,
+        sessionId: demo.nudge.recipientSessionId,
+        clientId: "integration-test",
+        idempotencyKey: "server-acknowledgement-0001",
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json().nudge).toMatchObject({ state: "acknowledged" });
   });
 
   it("exposes deterministic context packs and portfolio health", async () => {

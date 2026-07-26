@@ -17,12 +17,12 @@
 ```text
 provider event → allowlist → atomic outbox → idempotent record
 explicit fact → project recipients → relevance factors → delivery class
-nudge queue → desktop/MCP/agent boundary → acknowledgement → feedback record
+nudge queue → desktop/MCP/agent boundary → versioned outcome receipt
 ```
 
 ## Trust boundaries
 
-The public website receives no local context. The desktop renderer has no Node access and talks to a loopback-only daemon. The daemon validates request shapes, limits bodies, redacts inputs, and uses project-scoped reads. Provider hooks may enforce covered actions only while enabled and trusted.
+The public website receives no local context. The desktop renderer has no Node access and talks to a loopback-only daemon. The daemon authenticates every request, validates request shapes, limits bodies, redacts inputs, and uses project-scoped reads. Nudge outcomes require same-project session ownership and commit nudge state, feedback, and change-log cursor in one SQLite transaction. Provider hooks may enforce covered actions only while enabled and trusted.
 
 ## Failure behavior
 

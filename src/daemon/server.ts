@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import Fastify, { type FastifyReply } from "fastify";
 import { z } from "zod";
@@ -20,7 +19,6 @@ import {
   type StructuredEvidence,
 } from "../core/evidence.js";
 import {
-  acknowledgeRequestSchema,
   activeTaskSchema,
   checkInSchema,
   claimRequestSchema,
@@ -29,11 +27,12 @@ import {
   hookPreflightSchema,
   hookReceiptSchema,
   publishFactInputSchema,
+  receiptActionSchema,
+  receiptRequestSchema,
   releaseClaimRequestSchema,
   sessionSchema,
   syncRequestSchema,
 } from "../core/schemas.js";
-import type { Nudge } from "../core/schemas.js";
 import { sanitizeObject } from "../core/redaction.js";
 import { resolveAgentNudgeHome } from "../core/paths.js";
 import { resolve } from "node:path";
@@ -392,22 +391,35 @@ export function createServer(
     }
   });
 
-  app.post("/v1/nudges/:id/acknowledge", async (request, reply) => {
-    const params = request.params as { id: string };
-    const parsed = acknowledgeRequestSchema
-      .omit({ nudgeId: true })
+  app.post("/v1/nudges/:id/receipts/:action", async (request, reply) => {
+    const params = request.params as { id: string; action: string };
+    const action = receiptActionSchema.safeParse(params.action);
+    const body = receiptRequestSchema
+      .omit({ nudgeId: true, action: true })
       .safeParse(sanitizeObject(request.body));
-    if (!parsed.success)
+    if (!action.success || !body.success)
       return reply.code(400).send({
-        error: "invalid_acknowledgement",
-        details: parsed.error.flatten(),
+        error: "invalid_receipt",
+        details: body.success ? undefined : body.error.flatten(),
       });
     try {
-      return database.acknowledge({ ...parsed.data, nudgeId: params.id });
+      const result = database.recordReceipt({
+        ...body.data,
+        nudgeId: params.id,
+        action: action.data,
+      });
+      return reply.code(result.replayed ? 200 : 201).send(result);
     } catch (error) {
       return sendLiveSyncError(reply, error);
     }
   });
+
+  app.post("/v1/nudges/:id/acknowledge", async (_request, reply) =>
+    reply.code(410).send({
+      error: "legacy_acknowledgement_removed",
+      use: "/v1/nudges/:id/receipts/acknowledge",
+    }),
+  );
 
   app.post("/v1/hooks/preflight", async (request, reply) => {
     const parsed = hookPreflightSchema.safeParse(sanitizeObject(request.body));
@@ -557,43 +569,12 @@ export function createServer(
     }
   });
 
-  app.post("/nudges/:id/action", async (request, reply) => {
-    const id = (request.params as { id: string }).id;
-    const body = request.body as { action?: string; reason?: string };
-    const stateMap: Record<string, Nudge["state"]> = {
-      acknowledge: "acknowledged",
-      snooze: "snoozed",
-      dismiss: "dismissed",
-      used: "acknowledged",
-      stale: "dismissed",
-      wrong: "dismissed",
-    };
-    const state = body.action ? stateMap[body.action] : undefined;
-    if (!state) return reply.code(400).send({ error: "invalid_action" });
-    try {
-      const now = new Date().toISOString();
-      const updated = database.updateNudge(id, {
-        state,
-        acknowledgedAt: state === "acknowledged" ? now : undefined,
-        snoozedUntil:
-          state === "snoozed"
-            ? new Date(Date.now() + 15 * 60_000).toISOString()
-            : undefined,
-        dismissedReason:
-          state === "dismissed" ? (body.reason ?? body.action) : undefined,
-      });
-      database.put("feedback", {
-        id: randomUUID(),
-        projectId: updated.projectId,
-        nudgeId: id,
-        action: body.action,
-        at: now,
-      } as any);
-      return updated;
-    } catch (error) {
-      return reply.code(404).send({ error: String(error) });
-    }
-  });
+  app.post("/nudges/:id/action", async (_request, reply) =>
+    reply.code(410).send({
+      error: "legacy_nudge_action_removed",
+      use: "/v1/nudges/:id/receipts/:action",
+    }),
+  );
 
   app.post("/demo/:scenario", async (request, reply) => {
     const scenario = (request.params as { scenario: DemoScenario }).scenario;

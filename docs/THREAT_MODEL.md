@@ -17,6 +17,8 @@ The daemon accepts requests only when all of these checks pass:
 2. Browser `Origin`, when present, is an explicitly allowed loopback development origin. The unsafe `null` origin is rejected.
 3. The request carries the per-installation bearer credential in the `Authorization` header.
 
+Receipt mutations additionally require a same-project active session, recipient ownership, a valid nudge-state transition, a self-reported client label, and an idempotency key. The shared installation credential authenticates the request; the client label provides attribution and an idempotency namespace, not independent client identity. Nudge state, feedback receipt, and change-log entry commit in one transaction.
+
 The packaged renderer never receives the credential. Electron's sandboxed preload sends a bounded request description to the main process, and the main process adds authentication before calling the daemon. Request paths must remain on the fixed loopback origin; renderer methods are limited to `GET` and `POST`.
 
 ## Credential storage

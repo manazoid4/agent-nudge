@@ -14,8 +14,8 @@ Nudge states are queued, delivered, acknowledged, snoozed, dismissed, expired, o
 
 ## Live Sync v1
 
-The v1 shared-state loop adds sessions, current tasks, exact-path claims, a monotonic SQLite change log, recipient sync digests, and acknowledgement ownership.
+The v1 shared-state loop adds sessions, current tasks, exact-path claims, a monotonic SQLite change log, recipient sync digests, and ownership-checked outcome receipts.
 
-Facts published through `POST /v1/facts` are content-addressed and automatically routed to relevant active sessions in the same project. `POST /v1/sync` returns changes after a caller-owned cursor plus current peer, claim, and nudge state. Claim leases expire automatically; release or expiry supersedes their blocking nudges.
+Facts published through `POST /v1/facts` are content-addressed and automatically routed to relevant active sessions in the same project. `POST /v1/sync` returns changes after a caller-owned cursor plus current peer, claim, and nudge state. Claim leases expire automatically; release or expiry supersedes their blocking nudges. `POST /v1/nudges/:id/receipts/:action` records acknowledge, dismiss, snooze, wrong, stale, or used outcomes. Exact idempotent retries return the original receipt; conflicting reuse, wrong recipients, cross-project requests, expired nudges, and invalid transitions fail. State, receipt, and change cursor commit atomically.
 
 See [LIVE-SYNC.md](LIVE-SYNC.md) for HTTP, MCP, lifecycle, and capability details.

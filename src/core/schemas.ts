@@ -266,10 +266,40 @@ export const releaseClaimRequestSchema = z.object({
   claimId: z.string().min(1).max(200),
 });
 
-export const acknowledgeRequestSchema = z.object({
+export const receiptActionSchema = z.enum([
+  "acknowledge",
+  "dismiss",
+  "snooze",
+  "wrong",
+  "stale",
+  "used",
+]);
+
+export const receiptRequestSchema = z.object({
   projectId: z.string().min(1).max(160),
   sessionId: z.string().min(1).max(160),
   nudgeId: z.string().min(1).max(200),
+  action: receiptActionSchema,
+  clientId: z.string().min(1).max(120),
+  idempotencyKey: z.string().min(16).max(200),
+  reason: z.string().min(1).max(240).optional(),
+  snoozeMinutes: z.number().int().min(1).max(1_440).default(15),
+});
+
+export const feedbackReceiptSchema = z.object({
+  id: z.string().min(1),
+  schemaVersion: z.literal(1),
+  projectId: z.string().min(1),
+  nudgeId: z.string().min(1),
+  sessionId: z.string().min(1),
+  action: receiptActionSchema,
+  clientId: z.string().min(1),
+  idempotencyKey: z.string().min(1),
+  reason: z.string().optional(),
+  at: z.string().datetime(),
+  stateAfter: nudgeStateSchema,
+  snoozedUntil: z.string().datetime().optional(),
+  snoozeMinutes: z.number().int().min(1).max(1_440).optional(),
 });
 
 export const syncRequestSchema = z.object({
@@ -354,7 +384,9 @@ export type TaskRecord = z.infer<typeof taskRecordSchema>;
 export type PublishFactInput = z.infer<typeof publishFactInputSchema>;
 export type ClaimRequest = z.infer<typeof claimRequestSchema>;
 export type ReleaseClaimRequest = z.infer<typeof releaseClaimRequestSchema>;
-export type AcknowledgeRequest = z.infer<typeof acknowledgeRequestSchema>;
+export type ReceiptAction = z.infer<typeof receiptActionSchema>;
+export type ReceiptRequest = z.infer<typeof receiptRequestSchema>;
+export type FeedbackReceipt = z.infer<typeof feedbackReceiptSchema>;
 export type SyncRequest = z.infer<typeof syncRequestSchema>;
 export type HookPreflightInput = z.infer<typeof hookPreflightSchema>;
 export type HookReceiptInput = z.infer<typeof hookReceiptSchema>;
