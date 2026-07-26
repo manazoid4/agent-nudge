@@ -25,11 +25,16 @@ describe("product acceptance flow", () => {
     const acknowledged = (
       await app.inject({
         method: "POST",
-        url: `/nudges/${demo.nudge.id}/action`,
-        payload: { action: "acknowledge" },
+        url: `/v1/nudges/${demo.nudge.id}/receipts/acknowledge`,
+        payload: {
+          projectId: demo.nudge.projectId,
+          sessionId: demo.nudge.recipientSessionId,
+          clientId: "acceptance-test",
+          idempotencyKey: "acceptance-acknowledgement-0001",
+        },
       })
     ).json();
-    expect(acknowledged.state).toBe("acknowledged");
+    expect(acknowledged.nudge.state).toBe("acknowledged");
     const afterPack = (
       await app.inject({
         method: "GET",

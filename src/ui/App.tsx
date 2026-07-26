@@ -573,21 +573,20 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
     if (!selected) return;
     if (!isPublicDemo) {
       try {
-        const response =
-          actionName === "acknowledge"
-            ? await daemonFetch(`/v1/nudges/${selected.id}/acknowledge`, {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({
-                  projectId: selected.projectId,
-                  sessionId: selected.recipientSessionId,
-                }),
-              })
-            : await daemonFetch(`/nudges/${selected.id}/action`, {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ action: actionName }),
-              });
+        const response = await daemonFetch(
+          `/v1/nudges/${selected.id}/receipts/${actionName}`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectId: selected.projectId,
+              sessionId: selected.recipientSessionId,
+              clientId: "electron-renderer",
+              idempotencyKey: crypto.randomUUID(),
+              snoozeMinutes: 15,
+            }),
+          },
+        );
         if (!response.ok) throw new Error("action failed");
         await refresh();
         return;
@@ -1605,12 +1604,13 @@ function ChangelogPage() {
         <article>
           <time>26 July 2026</time>
           <div>
-            <span>v0.5.1 security beta</span>
-            <h2>Local control is authenticated</h2>
+            <span>v0.5.1 reliability beta</span>
+            <h2>Local control is authenticated and receipts are atomic</h2>
             <p>
               Per-installation credentials, hostile Host and Origin rejection, a
               sandboxed Electron request bridge, authenticated daemon health
-              proofs, safe credential rotation, and token-leak regressions.
+              proofs, safe credential rotation, and ownership-checked,
+              replay-safe outcome receipts committed as one local transaction.
             </p>
           </div>
         </article>

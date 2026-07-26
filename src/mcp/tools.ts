@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { buildScenario } from "../core/demo.js";
@@ -199,9 +200,46 @@ export function createMcpServer(database: NudgeDatabase) {
       sessionId: z.string(),
       nudgeId: z.string(),
     },
-    async (input) => textResult(database.acknowledge(input)),
+    async (input) =>
+      textResult(
+        database.recordReceipt({
+          ...input,
+          action: "acknowledge",
+          clientId: "mcp",
+          idempotencyKey: randomUUID(),
+          snoozeMinutes: 15,
+        }),
+      ),
   );
 
+  server.tool(
+    "agent_nudge_receipt",
+    "Record an ownership-checked outcome receipt for one nudge addressed to this session.",
+    {
+      projectId: z.string(),
+      sessionId: z.string(),
+      nudgeId: z.string(),
+      action: z.enum([
+        "acknowledge",
+        "dismiss",
+        "snooze",
+        "wrong",
+        "stale",
+        "used",
+      ]),
+      reason: z.string().max(240).optional(),
+      snoozeMinutes: z.number().int().min(1).max(1_440).default(15),
+      idempotencyKey: z.string().min(16).max(200).optional(),
+    },
+    async (input) =>
+      textResult(
+        database.recordReceipt({
+          ...input,
+          clientId: "mcp",
+          idempotencyKey: input.idempotencyKey ?? randomUUID(),
+        }),
+      ),
+  );
   return server;
 }
 

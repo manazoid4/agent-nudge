@@ -15,7 +15,7 @@ The shared state is intentionally narrow:
 - expiring path claims;
 - sourced decisions, failures, warnings, changes, verifications, and handoffs;
 - recipient-specific nudges;
-- acknowledgement and a monotonic project change cursor.
+- versioned outcome receipts and a monotonic project change cursor.
 
 Raw prompts, responses, hidden reasoning, command bodies, and file contents are not part of this contract.
 
@@ -28,7 +28,7 @@ POST /v1/facts
 POST /v1/sync
 POST /v1/claims
 POST /v1/claims/:id/release
-POST /v1/nudges/:id/acknowledge
+POST /v1/nudges/:id/receipts/:action
 POST /v1/hooks/preflight
 POST /v1/hooks/receipt
 ```
@@ -42,7 +42,7 @@ POST /v1/hooks/receipt
 - active claims;
 - active recipient nudges.
 
-All writes require an existing same-project session. Cross-project access and acknowledgements by the wrong recipient fail.
+All writes require an existing same-project session. Receipt actions are `acknowledge`, `dismiss`, `snooze`, `wrong`, `stale`, or `used`. Every receipt requires an authenticated request, an active recipient session, a self-reported client label, and a client-generated idempotency key. The installation credential authorizes the request; `clientId` is an attribution and idempotency-namespace label, not a separately authenticated identity. Cross-project access, wrong-recipient actions, expired nudges, and invalid state transitions fail.
 
 ## MCP
 
@@ -52,9 +52,10 @@ agent_nudge_publish_fact
 agent_nudge_claim
 agent_nudge_release_claim
 agent_nudge_acknowledge
+agent_nudge_receipt
 ```
 
-The tools use the same database and decision engine as HTTP. MCP is the portable baseline when a provider cannot offer a pre-tool hook.
+The tools use the same database, ownership checks, transition rules, and receipt transaction as HTTP. `agent_nudge_acknowledge` remains a narrow compatibility tool; `agent_nudge_receipt` supports every outcome. MCP is the portable baseline when a provider cannot offer a pre-tool hook.
 
 ## Claim lifecycle
 
@@ -64,7 +65,7 @@ Claims are coordination evidence, not operating-system locks. Separate worktrees
 
 ## Idempotency
 
-Explicit facts receive a content-derived identifier. Re-publishing the same semantic fact returns the existing fact and nudge instead of creating a second delivery. Nudges use a deterministic dedupe key per fact, recipient, and affected path.
+Explicit facts receive a content-derived identifier. Re-publishing the same semantic fact returns the existing fact and nudge instead of creating a second delivery. Nudges use a deterministic dedupe key per fact, recipient, and affected path. Outcome receipts derive a stable ID from project, authenticated client, and idempotency key. An exact retry returns the original receipt without another write; reusing a key with changed intent fails. Nudge state, receipt, and change-log cursor are committed or rolled back together.
 
 ## Honest capability boundary
 

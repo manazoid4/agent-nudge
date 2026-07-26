@@ -1,6 +1,6 @@
 # Agent Nudge
 
-**Context assurance for your coding agents.** Agent Nudge is a local-first Windows preflight and receipt layer for Claude, Codex, OpenCode, and Aider. It inspects repository rules, catches drift and conflicts, compiles the smallest useful brief, and records acknowledgement separately from delivery.
+**Context assurance for your coding agents.** Agent Nudge is a local-first Windows preflight and receipt layer for Claude, Codex, OpenCode, and Aider. It inspects repository rules, catches drift and conflicts, compiles the smallest useful brief, and records ownership-checked outcome receipts separately from delivery.
 
 ![Agent Nudge status](https://img.shields.io/badge/status-Windows_MVP-79d99a) ![Privacy](https://img.shields.io/badge/privacy-local--first-173d2a) ![License](https://img.shields.io/badge/license-MIT-black)
 
@@ -18,7 +18,7 @@ agent check-in + task intent
   → deterministic same-project fan-out
   → recipient sync + cursor
   → HOLD / REVIEW / CLEAR
-  → acknowledge or release
+  → acknowledge, dispute, snooze, use, or release
 ```
 
 - Conflicting edit: Claude claims `src/lib/cache.ts`; Codex receives a pre-action `BLOCK` warning.
@@ -26,7 +26,7 @@ agent check-in + task intent
 - Failed approach: Redis test failures surface before another agent repeats the approach.
 - Irrelevant suppression: an unrelated documentation event is scored `DROP`.
 
-The local proof uses session check-in, claim, sync, and acknowledgement APIs from a clean SQLite ledger. Releasing the claim changes the recipient from `HOLD` to `CLEAR`. Duplicate fact publication creates one recipient nudge.
+The local proof uses session check-in, claim, sync, and versioned receipt APIs from a clean SQLite ledger. Releasing the claim changes the recipient from `HOLD` to `CLEAR`. Duplicate fact publication creates one recipient nudge.
 
 The public browser experience is an interactive recorded scenario using public-safe fixtures. It does not run remote agents or upload repository context.
 
@@ -164,12 +164,12 @@ Claude / Codex / OpenCode task intent
                  ↓
    deterministic recipient fan-out
                  ↓
-    preflight hook + acknowledgement receipt
+    preflight hook + versioned outcome receipt
 ```
 
 The public Vercel site contains marketing and an interactive fixture demo only. The local daemon, SQLite database, and project context are not deployed.
 
-Hosted checkout uses the server-only variables documented in [.env.example](.env.example). Checkout remains a validation path until local API authentication, purchase recovery, refunds, and the production Ed25519 keypair pass end-to-end release tests. Desktop clients verify signed tokens with the matching public key; the payment server never receives repository context.
+Hosted checkout uses the server-only variables documented in [.env.example](.env.example). Checkout remains a validation path until purchase recovery, refunds, and the production Ed25519 keypair pass end-to-end release tests. Desktop clients verify signed tokens with the matching public key; the payment server never receives repository context.
 
 ## Privacy and security
 
@@ -182,7 +182,6 @@ Hosted checkout uses the server-only variables documented in [.env.example](.env
 - Raw provider payloads are discarded; only allowlisted event metadata can enter the outbox or ledger.
 - Instruction provenance records hashes, scope, size, timestamps, provider, and trust state—not file contents.
 - Delivery is never labelled as proof that a model “knows” something.
-- Loopback binding is not treated as local-client authentication; that work is tracked in issue #7.
 
 See [SECURITY.md](SECURITY.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/PROTOCOL.md](docs/PROTOCOL.md), and [docs/WINDOWS-INSTALL.md](docs/WINDOWS-INSTALL.md).
 
@@ -208,11 +207,10 @@ npm run assure -- capabilities
 
 ## Known MVP boundaries
 
-The current build proves deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, HTTP/MCP round trips, reversible project connectors, offline outbox replay, compiler receipts, context drift, signed licensing, allowlisted local runner processes, UI, Windows packaging, capability manifests, OpenCode event normalization, instruction provenance, structured evidence, doom-loop assessment, dependency-aware task checks, checkpoint previews, and read-only merge-risk analysis.
+The current build proves authenticated local control, deterministic live routing, local persistence, task presence, expiring claims, monotonic sync cursors, atomic replay-safe outcome receipts, HTTP/MCP round trips, reversible project connectors, offline outbox replay, compiler receipts, context drift, signed licensing, allowlisted local runner processes, UI, Windows packaging, capability manifests, OpenCode event normalization, instruction provenance, structured evidence, doom-loop assessment, dependency-aware task checks, checkpoint previews, and read-only merge-risk analysis.
 
 It does not yet:
 
-- authenticate local API clients;
 - guarantee a sole SQLite writer across all process combinations;
 - recover every connector transaction after hard process termination;
 - guarantee coverage of every provider action;

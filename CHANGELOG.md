@@ -12,6 +12,12 @@ All notable Agent Nudge changes are recorded here. Dates use ISO 8601.
 - Added daemon instance identity, challenge-response health verification, atomic credential rotation, and leakage/impersonation regressions.
 - Documented the local control-plane threat model, credential storage, diagnostics, rotation, and recovery.
 
+### Changed
+
+- Replaced split acknowledgement/action mutations with one versioned receipt protocol for acknowledge, dismiss, snooze, wrong, stale, and used outcomes.
+- Enforced active project/session ownership, valid state transitions, exact-replay idempotency, and atomic nudge/feedback/change-log commits across daemon, desktop, CLI, and MCP.
+- Retired both legacy mutation routes with explicit 410 Gone migration responses.
+
 ### Commercial validation
 
 - Auditing one-time pricing, the 14-day Pro trial, email-list capture, and the long-term moat roadmap before changing the live offer.
