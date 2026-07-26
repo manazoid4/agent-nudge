@@ -143,6 +143,7 @@ agent-nudge changelog --repo C:\path\to\repo
 agent-nudge changelog --repo C:\path\to\repo --apply CHANGELOG.generated.md
 agent-nudge license status
 agent-nudge license activate SIGNED_TOKEN
+agent-nudge auth rotate
 agent-nudge run codex --repo C:\path\to\repo --brief-file brief.md
 agent-nudge export [output.json]
 agent-nudge purge --preview
@@ -176,7 +177,8 @@ Hosted checkout uses the server-only variables documented in [.env.example](.env
 - No raw prompts, assistant responses, file contents, clipboard data, browser history, or `.env` values are collected by default.
 - Credential-shaped text is redacted before persistence.
 - Project ID scopes every ledger query.
-- Electron runs with context isolation, sandboxing, and no renderer Node integration.
+- Electron runs with context isolation, sandboxing, no renderer Node integration, and a main-process authenticated daemon bridge.
+- Every local daemon request requires the owner-only credential described in [the threat model](docs/THREAT_MODEL.md); `Origin: null` is rejected.
 - Raw provider payloads are discarded; only allowlisted event metadata can enter the outbox or ledger.
 - Instruction provenance records hashes, scope, size, timestamps, provider, and trust state—not file contents.
 - Delivery is never labelled as proof that a model “knows” something.

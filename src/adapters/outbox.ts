@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import type { AgentEvent } from "../core/schemas.js";
 import { resolveProjectStateDir } from "../core/paths.js";
+import { readLocalControlAuthorization } from "../security/local-control.js";
 
 export type OutboxDelivery = {
   delivered: boolean;
@@ -24,6 +25,7 @@ export type EventOutboxOptions = {
   stateDir?: string;
   timeoutMs?: number;
   fetcher?: typeof fetch;
+  authorization?: string;
 };
 
 export class EventOutbox {
@@ -31,6 +33,7 @@ export class EventOutbox {
   private readonly endpoint: string;
   private readonly timeoutMs: number;
   private readonly fetcher: typeof fetch;
+  private readonly authorization: string;
 
   constructor(
     readonly projectId: string,
@@ -43,6 +46,8 @@ export class EventOutbox {
     this.endpoint = options.endpoint ?? "http://127.0.0.1:47831/events";
     this.timeoutMs = options.timeoutMs ?? 350;
     this.fetcher = options.fetcher ?? fetch;
+    this.authorization =
+      options.authorization ?? readLocalControlAuthorization();
   }
 
   depth() {
@@ -116,7 +121,10 @@ export class EventOutbox {
     try {
       const response = await this.fetcher(this.endpoint, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          authorization: this.authorization,
+          "content-type": "application/json",
+        },
         body: JSON.stringify(event),
         signal: AbortSignal.timeout(this.timeoutMs),
       });

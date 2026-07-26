@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { normalizeOpenCodeEvent } from "../../src/adapters/opencode-v2.js";
-import { createServer } from "../../src/daemon/server.js";
+import { createTestServer } from "../helpers/server.js";
 import { NudgeDatabase } from "../../src/storage/database.js";
 
 const close: Array<() => Promise<void>> = [];
@@ -11,7 +11,7 @@ afterEach(async () => {
 describe("localhost API", () => {
   it("runs all proof scenarios through the real API and storage", async () => {
     const db = new NudgeDatabase(":memory:");
-    const app = createServer(db);
+    const app = createTestServer(db);
     close.push(async () => {
       await app.close();
       db.close();
@@ -27,7 +27,7 @@ describe("localhost API", () => {
 
   it("updates acknowledgement separately from delivery", async () => {
     const db = new NudgeDatabase(":memory:");
-    const app = createServer(db);
+    const app = createTestServer(db);
     close.push(async () => {
       await app.close();
       db.close();
@@ -45,7 +45,7 @@ describe("localhost API", () => {
 
   it("exposes deterministic context packs and portfolio health", async () => {
     const db = new NudgeDatabase(":memory:");
-    const app = createServer(db);
+    const app = createTestServer(db);
     close.push(async () => {
       await app.close();
       db.close();
@@ -78,7 +78,7 @@ describe("localhost API", () => {
 
   it("exposes provider capability truth", async () => {
     const db = new NudgeDatabase(":memory:");
-    const app = createServer(db);
+    const app = createTestServer(db);
     close.push(async () => {
       await app.close();
       db.close();
@@ -101,7 +101,7 @@ describe("localhost API", () => {
 
   it("derives and retrieves structured evidence from allowlisted events", async () => {
     const db = new NudgeDatabase(":memory:");
-    const app = createServer(db);
+    const app = createTestServer(db);
     close.push(async () => {
       await app.close();
       db.close();

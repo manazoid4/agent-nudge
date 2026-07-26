@@ -52,6 +52,7 @@ import type {
 import { LicenseService } from "../licensing/index.js";
 import { bootstrapRepository } from "../onboarding/bootstrap.js";
 import { RunnerService, type RunnerProvider } from "../runners/service.js";
+import { LocalControlAuth } from "../security/local-control.js";
 
 import { NudgeDatabase } from "../storage/database.js";
 
@@ -71,6 +72,7 @@ export function createServer(
   services: {
     license?: LicenseService;
     runners?: RunnerService;
+    auth?: LocalControlAuth;
   } = {},
 ) {
   const license =
@@ -79,34 +81,55 @@ export function createServer(
       statePath: join(resolveAgentNudgeHome(), "license.json"),
     });
   const runners = services.runners ?? new RunnerService();
+  const auth = services.auth ?? LocalControlAuth.loadOrCreate();
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024 });
 
   const allowedOrigins = new Set([
-    "null",
     "http://127.0.0.1:4173",
     "http://localhost:4173",
   ]);
   app.addHook("onRequest", async (req, reply) => {
+    const host = req.headers.host;
+    if (!host || !isLoopbackHost(host))
+      return reply.code(403).send({ error: "host_not_allowed" });
     const origin = req.headers.origin;
-    if (origin && !allowedOrigins.has(origin)) {
+    if (origin && !allowedOrigins.has(origin))
       return reply.code(403).send({ error: "origin_not_allowed" });
-    }
     if (origin) reply.header("Access-Control-Allow-Origin", origin);
     reply.header("Vary", "Origin");
     reply.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    reply.header("Access-Control-Allow-Headers", "Content-Type");
-    if (req.method === "OPTIONS") {
-      return reply.code(204).send();
-    }
+    reply.header(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, X-Agent-Nudge-Challenge",
+    );
+    if (req.method === "OPTIONS") return reply.code(204).send();
+    if (!auth.authorize(req.headers.authorization))
+      return reply.code(401).send({ error: "authentication_required" });
   });
 
-  app.get("/health", async () => ({
-    ok: true,
-    service: "agent-nudge",
-    version: "0.5.0",
-    localOnly: true,
-    at: new Date().toISOString(),
-  }));
+  app.get("/v1/health", async (request, reply) => {
+    const challenge = request.headers["x-agent-nudge-challenge"];
+    if (typeof challenge !== "string")
+      return reply.code(400).send({ error: "health_challenge_required" });
+    try {
+      return {
+        ok: true,
+        service: "agent-nudge",
+        version: "0.5.1",
+        protocolVersion: 1,
+        localOnly: true,
+        instanceId: auth.instanceId,
+        challengeProof: auth.prove(challenge),
+        at: new Date().toISOString(),
+      };
+    } catch {
+      return reply.code(400).send({ error: "invalid_health_challenge" });
+    }
+  });
+  app.post("/v1/auth/rotate", async () => {
+    auth.rotate();
+    return { rotated: true, restartRequired: false };
+  });
   app.get("/v1/license/status", async () => license.status());
   app.post("/v1/license/activate", async (request, reply) => {
     const parsed = z
@@ -668,6 +691,12 @@ export function createServer(
   return app;
 }
 
+function isLoopbackHost(host: string) {
+  const match = /^(127\.0\.0\.1|localhost|\[::1\])(?::(\d{1,5}))?$/.exec(host);
+  if (!match) return false;
+  const port = match[2];
+  return !port || Number(port) <= 65_535;
+}
 function sendLiveSyncError(reply: FastifyReply, error: unknown) {
   const code = error instanceof Error ? error.message : String(error);
   const status = code.endsWith("_not_found")

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { EventOutbox } from "../../src/adapters/outbox.js";
 import { normalizeHook } from "../../src/adapters/normalize.js";
+import { LocalControlAuth } from "../../src/security/local-control.js";
 
 describe("disk event outbox", () => {
   it("queues once while offline and replays the same idempotent event", async () => {
@@ -25,7 +26,9 @@ describe("disk event outbox", () => {
       },
       { receivedAt: "2026-07-20T00:00:00.000Z" },
     );
+    const authorization = LocalControlAuth.ephemeral().authorizationHeader();
     const offline = new EventOutbox(event.projectId, {
+      authorization,
       stateDir,
       fetcher: async () => {
         throw new Error("offline");
@@ -46,15 +49,21 @@ describe("disk event outbox", () => {
     expect(stored).not.toContain("SECRET_COMMAND_BODY");
 
     const deliveredIds: string[] = [];
+    const deliveredAuthorization: Array<string | null> = [];
     const online = new EventOutbox(event.projectId, {
+      authorization,
       stateDir,
       fetcher: async (_url, init) => {
         deliveredIds.push(JSON.parse(String(init?.body)).id);
+        deliveredAuthorization.push(
+          new Headers(init?.headers).get("authorization"),
+        );
         return new Response("{}", { status: 201 });
       },
     });
     expect(await online.flush()).toBe(1);
     expect(deliveredIds).toEqual([event.id]);
+    expect(deliveredAuthorization).toEqual([authorization]);
     expect(online.depth()).toBe(0);
   });
 });

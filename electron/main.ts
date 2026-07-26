@@ -1,13 +1,26 @@
-import { app, BrowserWindow, nativeImage, Tray, Menu, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  nativeImage,
+  Tray,
+  Menu,
+  shell,
+  ipcMain,
+} from "electron";
 import { join } from "node:path";
 import { createServer } from "../src/daemon/server.js";
 import { resolveDatabasePath } from "../src/core/paths.js";
 import { NudgeDatabase } from "../src/storage/database.js";
+import {
+  createHealthChallenge,
+  LocalControlAuth,
+} from "../src/security/local-control.js";
 
 let window: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let database: NudgeDatabase | null = null;
 let server: ReturnType<typeof createServer> | null = null;
+let auth: LocalControlAuth | null = null;
 let isQuitting = false;
 const portArgument = process.argv
   .find((argument) => argument.startsWith("--agent-nudge-port="))
@@ -32,12 +45,15 @@ app.on("second-instance", () => {
 
 app.whenReady().then(async () => {
   database = new NudgeDatabase(resolveDatabasePath());
-  server = createServer(database);
+  auth = LocalControlAuth.loadOrCreate();
+  server = createServer(database, { auth });
   try {
     await server.listen({ host: "127.0.0.1", port: daemonPort });
   } catch (error) {
     if (!String(error).includes("EADDRINUSE")) throw error;
-    const response = await fetch(`${daemonEndpoint}/health`, {
+    const challenge = createHealthChallenge();
+    const response = await daemonRequest("/v1/health", {
+      headers: { "x-agent-nudge-challenge": challenge },
       signal: AbortSignal.timeout(750),
     });
     const health = (await response.json()) as {
@@ -45,20 +61,52 @@ app.whenReady().then(async () => {
       service?: string;
       version?: string;
       localOnly?: boolean;
+      challengeProof?: string;
     };
     if (
       !response.ok ||
       !health.ok ||
       health.service !== "agent-nudge" ||
-      health.version !== "0.5.0" ||
-      health.localOnly !== true
+      health.version !== "0.5.1" ||
+      health.localOnly !== true ||
+      typeof health.challengeProof !== "string" ||
+      !auth.verify(challenge, health.challengeProof)
     )
       throw new Error(`port_${daemonPort}_is_not_compatible_agent_nudge`);
   }
+  ipcMain.handle("agent-nudge:request", async (_event, request) => {
+    const input = request as { path?: string; method?: string; body?: string };
+    if (!input.path?.startsWith("/") || input.path.startsWith("//"))
+      throw new Error("invalid_local_control_path");
+    const method = input.method ?? "GET";
+    if (!["GET", "POST"].includes(method))
+      throw new Error("invalid_local_control_method");
+    const response = await daemonRequest(input.path, {
+      method,
+      headers: input.body ? { "content-type": "application/json" } : undefined,
+      body: input.body,
+      signal: AbortSignal.timeout(5_000),
+    });
+    return {
+      ok: response.ok,
+      status: response.status,
+      body: await response.text(),
+      contentType: response.headers.get("content-type") ?? "application/json",
+    };
+  });
   createWindow();
   createTray();
 });
 
+async function daemonRequest(path: string, init: RequestInit = {}) {
+  if (!auth) throw new Error("local_control_auth_not_ready");
+  const target = new URL(path, `${daemonEndpoint}/`);
+  if (target.origin !== daemonEndpoint)
+    throw new Error("invalid_local_control_path");
+  const headers = new Headers(init.headers);
+  headers.set("authorization", auth.authorizationHeader());
+  return fetch(target, { ...init, headers });
+}
 function createWindow() {
   window = new BrowserWindow({
     width: 1320,
@@ -109,7 +157,7 @@ function createTray() {
       },
       {
         label: "Run proof demo",
-        click: () => void fetch(`${daemonEndpoint}/demo`, { method: "POST" }),
+        click: () => void daemonRequest("/demo", { method: "POST" }),
       },
       { type: "separator" },
       {

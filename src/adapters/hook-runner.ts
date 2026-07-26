@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import type { AgentProvider } from "../core/schemas.js";
+import { readLocalControlAuthorization } from "../security/local-control.js";
 import {
   deliverBestEffort,
   normalizeHook,
@@ -19,6 +20,7 @@ export type HookRunnerInput = {
   stateDir?: string;
   payload: HookPayload;
   fetcher?: typeof fetch;
+  authorization?: string;
 };
 
 export async function runProviderHook(input: HookRunnerInput) {
@@ -31,6 +33,7 @@ export async function runProviderHook(input: HookRunnerInput) {
   const delivery = await deliverBestEffort(event, `${endpoint}/events`, {
     stateDir: input.stateDir,
     fetcher: input.fetcher,
+    authorization: input.authorization,
   });
   const common = {
     provider: input.provider,
@@ -55,6 +58,7 @@ export async function runProviderHook(input: HookRunnerInput) {
         cwd: input.projectRoot,
       },
       input.fetcher,
+      input.authorization,
     );
     return { phase, delivery, status: "CLEAR" as const };
   }
@@ -64,6 +68,7 @@ export async function runProviderHook(input: HookRunnerInput) {
       `${endpoint}/v1/hooks/preflight`,
       { ...common, leaseSeconds: 120 },
       input.fetcher,
+      input.authorization,
     );
     if (!response)
       return {
@@ -89,6 +94,7 @@ export async function runProviderHook(input: HookRunnerInput) {
     `${endpoint}/v1/hooks/receipt`,
     common,
     input.fetcher,
+    input.authorization,
   );
   return {
     phase,
@@ -151,11 +157,16 @@ export function providerHookOutput(
   return undefined;
 }
 
-async function postJson(url: string, payload: unknown, fetcher = fetch) {
+async function postJson(
+  url: string,
+  payload: unknown,
+  fetcher = fetch,
+  authorization = readLocalControlAuthorization(),
+) {
   try {
     const response = await fetcher(url, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { authorization, "content-type": "application/json" },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(500),
     });

@@ -12,6 +12,11 @@ import {
 import { buildOpenCodePlugin } from "../connectors/opencode-plugin.js";
 import { buildAllScenarios } from "../core/demo.js";
 import { resolveAgentNudgeHome } from "../core/paths.js";
+import {
+  createHealthChallenge,
+  localControlFetch,
+  LocalControlAuth,
+} from "../security/local-control.js";
 
 const command = process.argv[2] ?? "help";
 const endpoint = process.env.AGENT_NUDGE_URL ?? "http://127.0.0.1:47831";
@@ -38,6 +43,7 @@ async function main() {
   if (command === "init" || command === "bootstrap") return bootstrap();
   if (command === "changelog") return changelog();
   if (command === "license") return licenseCommand();
+  if (command === "auth") return authCommand();
   if (command === "run" || command === "launch") return launchAgent();
   if (command === "brief" || command === "compile") {
     const { brief } = await import("./brief.js");
@@ -244,7 +250,7 @@ async function acknowledge() {
 }
 
 async function postJson(path: string, payload: unknown) {
-  const response = await fetch(`${endpoint}${path}`, {
+  const response = await localControlFetch(endpoint, path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
@@ -268,10 +274,17 @@ function splitList(value: string) {
 async function doctor() {
   let daemon = false;
   try {
-    const response = await fetch(`${endpoint}/health`, {
+    const challenge = createHealthChallenge();
+    const auth = LocalControlAuth.loadOrCreate();
+    const response = await localControlFetch(endpoint, "/v1/health", {
+      headers: { "x-agent-nudge-challenge": challenge },
       signal: AbortSignal.timeout(800),
     });
-    daemon = response.ok;
+    const health = (await response.json()) as { challengeProof?: string };
+    daemon =
+      response.ok &&
+      typeof health.challengeProof === "string" &&
+      auth.verify(challenge, health.challengeProof);
   } catch {
     daemon = false;
   }
@@ -298,7 +311,7 @@ async function doctor() {
 
 async function demo() {
   try {
-    const response = await fetch(`${endpoint}/demo`, {
+    const response = await localControlFetch(endpoint, "/demo", {
       method: "POST",
       signal: AbortSignal.timeout(1500),
     });
@@ -514,6 +527,11 @@ async function licenseCommand() {
   throw new Error(`Unknown license action: ${action}`);
 }
 
+async function authCommand() {
+  if ((process.argv[3] ?? "") !== "rotate")
+    throw new Error("Usage: agent-nudge auth rotate");
+  console.log(JSON.stringify(await postJson("/v1/auth/rotate", {}), null, 2));
+}
 async function launchAgent() {
   const provider = process.argv[3];
   if (!provider || !["claude", "codex", "aider"].includes(provider))
@@ -531,9 +549,13 @@ async function launchAgent() {
   let job = started;
   while (job.state === "running") {
     await new Promise((resolveWait) => setTimeout(resolveWait, 250));
-    const response = await fetch(`${endpoint}/v1/runs/${started.id}`, {
-      signal: AbortSignal.timeout(1_500),
-    });
+    const response = await localControlFetch(
+      endpoint,
+      `/v1/runs/${started.id}`,
+      {
+        signal: AbortSignal.timeout(1_500),
+      },
+    );
     if (!response.ok) throw new Error(`Runner read failed: ${response.status}`);
     job = (await response.json()) as typeof started;
   }
@@ -580,7 +602,7 @@ function parseUtilityArgs(args: string[]) {
 }
 
 async function exportData() {
-  const response = await fetch(`${endpoint}/export`, {
+  const response = await localControlFetch(endpoint, "/export", {
     signal: AbortSignal.timeout(1500),
   });
   if (!response.ok) throw new Error(`Daemon export failed: ${response.status}`);
@@ -602,7 +624,7 @@ async function contextPack() {
   }
   const query = new URLSearchParams({ projectId });
   if (recipientSessionId) query.set("recipientSessionId", recipientSessionId);
-  const response = await fetch(`${endpoint}/context-pack?${query}`, {
+  const response = await localControlFetch(endpoint, `/context-pack?${query}`, {
     signal: AbortSignal.timeout(1500),
   });
   if (!response.ok) throw new Error(`Context pack failed: ${response.status}`);
@@ -610,7 +632,7 @@ async function contextPack() {
 }
 
 async function portfolio() {
-  const response = await fetch(`${endpoint}/portfolio`, {
+  const response = await localControlFetch(endpoint, "/portfolio", {
     signal: AbortSignal.timeout(1500),
   });
   if (!response.ok)
@@ -626,7 +648,7 @@ async function purgePreview() {
     process.exitCode = 2;
     return;
   }
-  const response = await fetch(`${endpoint}/purge/preview`, {
+  const response = await localControlFetch(endpoint, "/purge/preview", {
     signal: AbortSignal.timeout(1500),
   });
   console.log(JSON.stringify(await response.json(), null, 2));
