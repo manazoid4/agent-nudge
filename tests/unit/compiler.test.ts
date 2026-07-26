@@ -22,14 +22,44 @@ describe("Agent Brief Compiler", () => {
   describe("Profile Loader", () => {
     it("loads approved personal rules and skips rejected/disabled", () => {
       const profilePath = join(tmpDir, "profile1.json");
-      writeFileSync(profilePath, JSON.stringify({
-        version: "1.0",
-        rules: [
-          { id: "r1", title: "R1", text: "T1", scope: "personal", status: "approved", enabled: true, applicableModes: ["*"], applicableAgents: ["*"] },
-          { id: "r2", title: "R2", text: "T2", scope: "personal", status: "candidate", enabled: true, applicableModes: ["*"], applicableAgents: ["*"] },
-          { id: "r3", title: "R3", text: "T3", scope: "personal", status: "approved", enabled: false, applicableModes: ["*"], applicableAgents: ["*"] }
-        ]
-      }));
+      writeFileSync(
+        profilePath,
+        JSON.stringify({
+          version: "1.0",
+          rules: [
+            {
+              id: "r1",
+              title: "R1",
+              text: "T1",
+              scope: "personal",
+              status: "approved",
+              enabled: true,
+              applicableModes: ["*"],
+              applicableAgents: ["*"],
+            },
+            {
+              id: "r2",
+              title: "R2",
+              text: "T2",
+              scope: "personal",
+              status: "candidate",
+              enabled: true,
+              applicableModes: ["*"],
+              applicableAgents: ["*"],
+            },
+            {
+              id: "r3",
+              title: "R3",
+              text: "T3",
+              scope: "personal",
+              status: "approved",
+              enabled: false,
+              applicableModes: ["*"],
+              applicableAgents: ["*"],
+            },
+          ],
+        }),
+      );
 
       const loaded = loadProfile(profilePath);
       expect(loaded).toHaveLength(1);
@@ -49,19 +79,22 @@ describe("Agent Brief Compiler", () => {
       mkdirSync(testRepo);
       writeFileSync(join(testRepo, ".env"), "SECRET=true");
       writeFileSync(join(testRepo, "AGENTS.md"), "content");
-      
+
       const { sources } = readRepositoryContext(testRepo);
-      const sourcePaths = sources.map(s => s.path);
-      expect(sourcePaths.some(p => p.includes(".env"))).toBe(false);
+      const sourcePaths = sources.map((s) => s.path);
+      expect(sourcePaths.some((p) => p.includes(".env"))).toBe(false);
     });
 
     it("redacts credential-shaped content", () => {
       const testRepo = join(tmpDir, "repo_cred");
       mkdirSync(testRepo);
-      writeFileSync(join(testRepo, "AGENTS.md"), "Use the password AWS_SECRET_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE");
-      
+      writeFileSync(
+        join(testRepo, "AGENTS.md"),
+        "Use the password AWS_SECRET_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE",
+      );
+
       const { sources } = readRepositoryContext(testRepo);
-      const agentMd = sources.find(s => s.path.includes("AGENTS.md"));
+      const agentMd = sources.find((s) => s.path.includes("AGENTS.md"));
       expect(agentMd).toBeDefined();
       expect(agentMd!.content).not.toContain("AKIAIOSFODNN7EXAMPLE");
       expect(agentMd!.content).toContain("REDACTED");
@@ -71,23 +104,57 @@ describe("Agent Brief Compiler", () => {
   describe("Regression: Agent and Mode Mapping", () => {
     it("Claude + RESEARCH maps correctly", () => {
       const rules: any[] = [
-        { id: "1", title: "Claude Rule", text: "Claude only", applicableAgents: ["Claude"], applicableModes: ["*"], resolutionLevel: "PersonalDefault" },
-        { id: "2", title: "Research Rule", text: "Research only", applicableAgents: ["*"], applicableModes: ["RESEARCH"], resolutionLevel: "PersonalDefault" },
-        { id: "3", title: "Codex Rule", text: "Codex only", applicableAgents: ["Codex"], applicableModes: ["*"], resolutionLevel: "PersonalDefault" }
+        {
+          id: "1",
+          title: "Claude Rule",
+          text: "Claude only",
+          applicableAgents: ["Claude"],
+          applicableModes: ["*"],
+          resolutionLevel: "PersonalDefault",
+        },
+        {
+          id: "2",
+          title: "Research Rule",
+          text: "Research only",
+          applicableAgents: ["*"],
+          applicableModes: ["RESEARCH"],
+          resolutionLevel: "PersonalDefault",
+        },
+        {
+          id: "3",
+          title: "Codex Rule",
+          text: "Codex only",
+          applicableAgents: ["Codex"],
+          applicableModes: ["*"],
+          resolutionLevel: "PersonalDefault",
+        },
       ];
-      
-      const filtered = rules.filter(r => {
-        const matchesAgent = r.applicableAgents.some((a: string) => a === "*" || a.toLowerCase() === "claude");
-        const matchesMode = r.applicableModes.some((m: string) => m === "*" || m.toLowerCase() === "research");
+
+      const filtered = rules.filter((r) => {
+        const matchesAgent = r.applicableAgents.some(
+          (a: string) => a === "*" || a.toLowerCase() === "claude",
+        );
+        const matchesMode = r.applicableModes.some(
+          (m: string) => m === "*" || m.toLowerCase() === "research",
+        );
         return matchesAgent && matchesMode;
       });
 
       expect(filtered).toHaveLength(2);
-      expect(filtered.map(r => r.id)).toEqual(["1", "2"]);
+      expect(filtered.map((r) => r.id)).toEqual(["1", "2"]);
     });
 
     it("Codex + BUILD maps correctly", () => {
-      const ctx: any = { taskObjective: "Obj", mode: "BUILD", agent: "Codex", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const ctx: any = {
+        taskObjective: "Obj",
+        mode: "BUILD",
+        agent: "Codex",
+        verbosity: "standard",
+        sources: [],
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
+      };
       const output = renderBrief(ctx);
       expect(output).toContain("**Agent:** Codex");
       expect(output).toContain("**Mode:** BUILD");
@@ -95,7 +162,16 @@ describe("Agent Brief Compiler", () => {
     });
 
     it("Hermes + RESUME maps correctly", () => {
-      const ctx: any = { taskObjective: "Obj", mode: "RESUME", agent: "Hermes", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const ctx: any = {
+        taskObjective: "Obj",
+        mode: "RESUME",
+        agent: "Hermes",
+        verbosity: "standard",
+        sources: [],
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
+      };
       const output = renderBrief(ctx);
       expect(output).toContain("**Agent:** Hermes");
       expect(output).toContain("**Mode:** RESUME");
@@ -103,7 +179,16 @@ describe("Agent Brief Compiler", () => {
     });
 
     it("OpenCode + REVIEW maps correctly", () => {
-      const ctx: any = { taskObjective: "Obj", mode: "REVIEW", agent: "OpenCode", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const ctx: any = {
+        taskObjective: "Obj",
+        mode: "REVIEW",
+        agent: "OpenCode",
+        verbosity: "standard",
+        sources: [],
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
+      };
       const output = renderBrief(ctx);
       expect(output).toContain("**Agent:** OpenCode");
       expect(output).toContain("**Mode:** REVIEW");
@@ -111,7 +196,16 @@ describe("Agent Brief Compiler", () => {
     });
 
     it("Grok + PLAN maps correctly", () => {
-      const ctx: any = { taskObjective: "Obj", mode: "PLAN", agent: "Grok", verbosity: "standard", sources: [], activeRules: [], conflictsSurfaced: [], digest: "123" };
+      const ctx: any = {
+        taskObjective: "Obj",
+        mode: "PLAN",
+        agent: "Grok",
+        verbosity: "standard",
+        sources: [],
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
+      };
       const output = renderBrief(ctx);
       expect(output).toContain("**Agent:** Grok");
       expect(output).toContain("**Mode:** PLAN");
@@ -122,10 +216,20 @@ describe("Agent Brief Compiler", () => {
   describe("Resolver", () => {
     it("repository rules override personal defaults", () => {
       const rules: any[] = [
-        { id: "personal1", title: "Git Push", text: "No pushing", resolutionLevel: "PersonalDefault" },
-        { id: "repo1", title: "Git Push", text: "Pushing allowed", resolutionLevel: "RepoConstitution" }
+        {
+          id: "personal1",
+          title: "Git Push",
+          text: "No pushing",
+          resolutionLevel: "PersonalDefault",
+        },
+        {
+          id: "repo1",
+          title: "Git Push",
+          text: "Pushing allowed",
+          resolutionLevel: "RepoConstitution",
+        },
       ];
-      
+
       const { activeRules, conflictsSurfaced } = resolveConflicts(rules);
       expect(activeRules).toHaveLength(1);
       expect(activeRules[0]!.id).toBe("repo1");
@@ -135,28 +239,48 @@ describe("Agent Brief Compiler", () => {
 
     it("surfaces unresolved conflicts on tie", () => {
       const rules: any[] = [
-        { id: "projA", title: "Linting", text: "Use ESLint", resolutionLevel: "ProjectPreference" },
-        { id: "projB", title: "Linting", text: "Use Biome", resolutionLevel: "ProjectPreference" }
+        {
+          id: "projA",
+          title: "Linting",
+          text: "Use ESLint",
+          resolutionLevel: "ProjectPreference",
+        },
+        {
+          id: "projB",
+          title: "Linting",
+          text: "Use Biome",
+          resolutionLevel: "ProjectPreference",
+        },
       ];
-      
+
       const { activeRules, conflictsSurfaced } = resolveConflicts(rules);
       expect(activeRules).toHaveLength(2); // Both kept
       expect(conflictsSurfaced).toHaveLength(1);
-      expect(conflictsSurfaced[0]!.reason).toContain("Equivalent precedence tie");
+      expect(conflictsSurfaced[0]!.reason).toContain(
+        "Equivalent precedence tie",
+      );
     });
   });
 
   describe("Renderer and Digest", () => {
     it("identical logical inputs produce identical digests", () => {
       const ctx1: any = {
-        taskObjective: "Task", mode: "BUILD", agent: "Claude", verbosity: "standard",
+        taskObjective: "Task",
+        mode: "BUILD",
+        agent: "Claude",
+        verbosity: "standard",
         sources: [{ type: "file", digest: "abcd" }],
-        activeRules: [{ id: "rule1" }], conflictsSurfaced: []
+        activeRules: [{ id: "rule1" }],
+        conflictsSurfaced: [],
       };
       const ctx2: any = {
-        taskObjective: "Task", mode: "BUILD", agent: "Claude", verbosity: "standard",
+        taskObjective: "Task",
+        mode: "BUILD",
+        agent: "Claude",
+        verbosity: "standard",
         sources: [{ type: "file", digest: "abcd" }],
-        activeRules: [{ id: "rule1" }], conflictsSurfaced: []
+        activeRules: [{ id: "rule1" }],
+        conflictsSurfaced: [],
       };
 
       const d1 = computeDigest(ctx1);
@@ -166,8 +290,13 @@ describe("Agent Brief Compiler", () => {
 
     it("RESEARCH, BUILD, and RESUME outputs differ", () => {
       const baseCtx: any = {
-        taskObjective: "Task", agent: "Claude", verbosity: "standard",
-        sources: [], activeRules: [], conflictsSurfaced: [], digest: "123"
+        taskObjective: "Task",
+        agent: "Claude",
+        verbosity: "standard",
+        sources: [],
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
       };
 
       const outResearch = renderBrief({ ...baseCtx, mode: "RESEARCH" });
@@ -182,9 +311,14 @@ describe("Agent Brief Compiler", () => {
 
     it("concise output strips detailed source bodies", () => {
       const ctx: any = {
-        taskObjective: "Task", mode: "BUILD", agent: "Claude", verbosity: "concise",
+        taskObjective: "Task",
+        mode: "BUILD",
+        agent: "Claude",
+        verbosity: "concise",
         sources: [{ type: "file", path: "/a/b.md", content: "hello world" }],
-        activeRules: [], conflictsSurfaced: [], digest: "123"
+        activeRules: [],
+        conflictsSurfaced: [],
+        digest: "123",
       };
 
       const out = renderBrief(ctx);

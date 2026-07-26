@@ -10,7 +10,10 @@
       "confidence": "high",
       "applicableModes": ["BUILD", "REVIEW", "RESUME"],
       "applicableAgents": ["*"],
-      "sourceReferences": ["MAZ-PROMPT-PROFILE.md#2-default-execution-rules", "agent-nudge/BUILD_RECEIPT.md"],
+      "sourceReferences": [
+        "MAZ-PROMPT-PROFILE.md#2-default-execution-rules",
+        "agent-nudge/BUILD_RECEIPT.md"
+      ],
       "enabled": true,
       "priority": 40
     },

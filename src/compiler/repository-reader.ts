@@ -11,9 +11,10 @@ function computeDigest(content: string): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
-export function readRepositoryContext(
-  repoPath: string
-): { sources: ContextSource[]; skippedSources: SkippedSource[] } {
+export function readRepositoryContext(repoPath: string): {
+  sources: ContextSource[];
+  skippedSources: SkippedSource[];
+} {
   const sources: ContextSource[] = [];
   const skippedSources: SkippedSource[] = [];
 
@@ -23,7 +24,7 @@ export function readRepositoryContext(
     { name: "HANDOFF.md", trustLevel: "Repo" as const },
     { name: ".agent-state/HANDOFF.md", trustLevel: "Repo" as const },
     { name: "BUILD_PLAN.md", trustLevel: "Repo" as const },
-    { name: "plan.md", trustLevel: "Repo" as const }
+    { name: "plan.md", trustLevel: "Repo" as const },
   ];
 
   for (const f of filesToRead) {
@@ -34,7 +35,10 @@ export function readRepositoryContext(
 
     // Exclude .env check (in case it's somehow matches)
     if (basename(fullPath).includes(".env")) {
-      skippedSources.push({ path: fullPath, reason: "Security block: .env file excluded." });
+      skippedSources.push({
+        path: fullPath,
+        reason: "Security block: .env file excluded.",
+      });
       continue;
     }
 
@@ -43,7 +47,7 @@ export function readRepositoryContext(
       if (stats.size > SIZE_LIMIT) {
         skippedSources.push({
           path: fullPath,
-          reason: `File size ${stats.size} exceeds limit of ${SIZE_LIMIT} bytes.`
+          reason: `File size ${stats.size} exceeds limit of ${SIZE_LIMIT} bytes.`,
         });
         continue;
       }
@@ -58,12 +62,12 @@ export function readRepositoryContext(
         content: redacted,
         lastModified: stats.mtime,
         trustLevel: f.trustLevel,
-        digest: computeDigest(redacted)
+        digest: computeDigest(redacted),
       });
     } catch (e: any) {
       skippedSources.push({
         path: fullPath,
-        reason: `Read failed: ${e.message}`
+        reason: `Read failed: ${e.message}`,
       });
     }
   }
@@ -75,10 +79,10 @@ export function readRepositoryContext(
       const raw = readFileSync(packageJsonPath, "utf-8");
       const parsed = JSON.parse(raw);
       const scripts = parsed.scripts || {};
-      
+
       const validationKeys = ["test", "lint", "typecheck", "build", "format"];
       const foundScripts: Record<string, string> = {};
-      
+
       for (const k of validationKeys) {
         if (scripts[k]) {
           foundScripts[k] = scripts[k];
@@ -92,7 +96,7 @@ export function readRepositoryContext(
           type: "command",
           content: contentStr,
           trustLevel: "Repo",
-          digest: computeDigest(contentStr)
+          digest: computeDigest(contentStr),
         });
       }
     } catch {
@@ -102,15 +106,21 @@ export function readRepositoryContext(
 
   // Git state
   try {
-    const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoPath, encoding: "utf-8" }).trim();
-    const status = execSync("git status --short", { cwd: repoPath, encoding: "utf-8" }).trim();
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+      cwd: repoPath,
+      encoding: "utf-8",
+    }).trim();
+    const status = execSync("git status --short", {
+      cwd: repoPath,
+      encoding: "utf-8",
+    }).trim();
     const content = `Branch: ${branch}\nDirty: ${status ? "yes" : "no"}\nStatus:\n${status || "Clean"}`;
     sources.push({
       path: join(repoPath, ".git"),
       type: "git",
       content,
       trustLevel: "Repo",
-      digest: computeDigest(content)
+      digest: computeDigest(content),
     });
   } catch {
     sources.push({
@@ -118,7 +128,7 @@ export function readRepositoryContext(
       type: "git",
       content: "Git status: unavailable or not a repository.",
       trustLevel: "Unknown",
-      digest: computeDigest("Git status: unavailable or not a repository.")
+      digest: computeDigest("Git status: unavailable or not a repository."),
     });
   }
 

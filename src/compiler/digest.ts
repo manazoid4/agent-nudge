@@ -12,12 +12,14 @@ export function computeDigest(ctx: ResolvedContext): string {
     agent: ctx.agent,
     verbosity: ctx.verbosity,
     // Sort rules by ID to ensure deterministic order
-    rules: ctx.activeRules.map(r => r.id).sort(),
+    rules: ctx.activeRules.map((r) => r.id).sort(),
     // Map sources to relative identifiers + content digests
-    sources: ctx.sources.map(s => ({
-      type: s.type,
-      digest: s.digest
-    })).sort((a, b) => a.digest.localeCompare(b.digest))
+    sources: ctx.sources
+      .map((s) => ({
+        type: s.type,
+        digest: s.digest,
+      }))
+      .sort((a, b) => a.digest.localeCompare(b.digest)),
   };
 
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");

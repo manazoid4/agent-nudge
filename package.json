@@ -9,6 +9,7 @@
   "main": "dist-node/main.cjs",
   "bin": {
     "agent-nudge": "dist-node/cli.cjs",
+    "agent-nudge-assure": "dist-node/assure.cjs",
     "agent-nudge-hook": "dist-node/hook.cjs",
     "agent-nudge-mcp": "dist-node/mcp.cjs"
   },
@@ -29,6 +30,7 @@
     "smoke:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-release.ps1",
     "demo": "tsx src/cli/index.ts demo",
     "doctor": "tsx src/cli/index.ts doctor",
+    "assure": "tsx src/cli/assure.ts",
     "start:daemon": "node dist-node/daemon.cjs"
   },
   "dependencies": {

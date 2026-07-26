@@ -2,12 +2,12 @@ import { ProfileRule } from "./types.js";
 
 // Note: The precedence values map smaller numbers to higher precedence.
 const PRECEDENCE_MAP: Record<string, number> = {
-  "TaskInstruction": 1,
-  "RepoConstitution": 2,
-  "ProjectPreference": 3,
-  "PersonalDefault": 4,
-  "HistoricalPattern": 5,
-  "ModelSuggestion": 6
+  TaskInstruction: 1,
+  RepoConstitution: 2,
+  ProjectPreference: 3,
+  PersonalDefault: 4,
+  HistoricalPattern: 5,
+  ModelSuggestion: 6,
 };
 
 // Internal representation for resolution
@@ -17,10 +17,18 @@ interface ResolvableRule extends ProfileRule {
 
 export function resolveConflicts(rawRules: ResolvableRule[]): {
   activeRules: ProfileRule[];
-  conflictsSurfaced: { overwrittenId: string; winnerId: string; reason: string }[];
+  conflictsSurfaced: {
+    overwrittenId: string;
+    winnerId: string;
+    reason: string;
+  }[];
 } {
   const activeRulesMap = new Map<string, ResolvableRule>();
-  const conflictsSurfaced: { overwrittenId: string; winnerId: string; reason: string }[] = [];
+  const conflictsSurfaced: {
+    overwrittenId: string;
+    winnerId: string;
+    reason: string;
+  }[] = [];
 
   for (const rule of rawRules) {
     if (!rule.title) {
@@ -43,7 +51,7 @@ export function resolveConflicts(rawRules: ResolvableRule[]): {
       conflictsSurfaced.push({
         overwrittenId: existing.id,
         winnerId: rule.id,
-        reason: `${rule.resolutionLevel} overrides ${existing.resolutionLevel}`
+        reason: `${rule.resolutionLevel} overrides ${existing.resolutionLevel}`,
       });
       activeRulesMap.set(rule.title, rule);
     } else if (newWeight > existingWeight) {
@@ -51,14 +59,14 @@ export function resolveConflicts(rawRules: ResolvableRule[]): {
       conflictsSurfaced.push({
         overwrittenId: rule.id,
         winnerId: existing.id,
-        reason: `${existing.resolutionLevel} overrides ${rule.resolutionLevel}`
+        reason: `${existing.resolutionLevel} overrides ${rule.resolutionLevel}`,
       });
     } else {
       // Tie: Keep both but surface the conflict.
       conflictsSurfaced.push({
         overwrittenId: existing.id, // neither is truly overwritten, but recorded
         winnerId: rule.id,
-        reason: `Equivalent precedence tie on "${rule.title}". Both kept.`
+        reason: `Equivalent precedence tie on "${rule.title}". Both kept.`,
       });
       // Suffix the ID so both survive in the map
       activeRulesMap.set(`${rule.title}_${rule.id}`, rule);

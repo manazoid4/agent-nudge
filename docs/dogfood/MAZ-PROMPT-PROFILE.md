@@ -9,7 +9,9 @@
 Maz does not use one universal rigid structure. Different tasks require different prompt families.
 
 ### [TEMPORARY TASK RULE] One-Batch Build Prompt (New Projects / Huge Refactors)
+
 Used when bootstrapping (e.g., `agent-nudge-super-x10-build-prompt.md`).
+
 1. **Metadata:** Target repo, agent role, objective.
 2. **Operating Mode:** Explicit constraints on autonomy (Inspect -> Plan -> Implement -> Verify -> Review).
 3. **Mission / Thesis:** Differentiating the product from competitors.
@@ -18,7 +20,9 @@ Used when bootstrapping (e.g., `agent-nudge-super-x10-build-prompt.md`).
 6. **Target Stack / Domain Model:** Allowed tech and TypeScript schemas.
 
 ### [TEMPORARY TASK RULE] Site Audit & UX Polish
+
 Used for UI/Product reviews (e.g., `2026-05-20 Site Audit + 3 New Features Prompt.md`).
+
 1. **Project Positioning:** "JobFilter is not a shared-lead marketplace..."
 2. **Roles to Play:** Product Strategist, Conversion Copywriter, UX/UI Designer.
 3. **Main Outcomes:** Numbered goals (e.g., "Make the homepage instantly understandable").
@@ -26,7 +30,9 @@ Used for UI/Product reviews (e.g., `2026-05-20 Site Audit + 3 New Features Promp
 5. **Workflow & Strict Rules:** "Repo scan → Vault scan → Site audit... No fake testimonials."
 
 ### [TEMPORARY TASK RULE] Copywriting / Brand Voice
+
 Used for content generation (e.g., `scrap-finance-partners/AGENTS.md`).
+
 1. **Context & Tone:** "Speak like someone who has stood in the yard at 6am."
 2. **Structure:** PAIN → SOLUTION → CONTROL.
 3. **Forbidden Words & Required Phrases.**
@@ -43,7 +49,7 @@ Used for content generation (e.g., `scrap-finance-partners/AGENTS.md`).
 - **[TOOL-SPECIFIC] Hermes:** High-agency local execution, desktop automation, heavy research, and orchestration via tools.
 - **[TOOL-SPECIFIC] Claude Code:** Project-specific implementation, planning loops, and feature building (often receives the "PLAN" or "BUILD" payload from MAZos).
 - **[TOOL-SPECIFIC] Codex:** Code discovery, multi-agent squad implementation. Uses `codebase-memory-mcp` for codebase graph traversal.
-- **[PROJECT-SPECIFIC] MAZos:** Acts as the "Loop cockpit" that orchestrates the human-to-agent handoff, but does *not* launch agents itself.
+- **[PROJECT-SPECIFIC] MAZos:** Acts as the "Loop cockpit" that orchestrates the human-to-agent handoff, but does _not_ launch agents itself.
 
 ## 4. Common Constraints & Prohibited Actions
 
@@ -61,6 +67,7 @@ Used for content generation (e.g., `scrap-finance-partners/AGENTS.md`).
 ## 6. Personal-Profile Precedence Hierarchy
 
 Lower levels must never silently override higher levels:
+
 1. **Explicit current task instruction.**
 2. **Current repository constitution and safety rules** (e.g., `AGENTS.md` in the repo).
 3. **Approved project preferences.**
@@ -71,23 +78,23 @@ Lower levels must never silently override higher levels:
 ## 7. Conflicts & Resolution Engine
 
 - **Execute Autonomously vs. Stop at Uncertainty:**
-  *Resolution:* Task mode dictates. In BUILD mode, stop at human gates (credentials, deployment). In PLAN mode, execute analysis autonomously.
+  _Resolution:_ Task mode dictates. In BUILD mode, stop at human gates (credentials, deployment). In PLAN mode, execute analysis autonomously.
 - **Provider-Neutral vs. Tool-Specific Optimizations:**
-  *Resolution:* Tool-specific optimizations (like Codex `codebase-memory-mcp`) apply only when that specific agent is targeted. The architecture remains provider-neutral.
+  _Resolution:_ Tool-specific optimizations (like Codex `codebase-memory-mcp`) apply only when that specific agent is targeted. The architecture remains provider-neutral.
 - **Commit/Push Expectations vs. Branch Safety:**
-  *Resolution:* Repo constitution overrides. `claude-obsidian` requires a push to `fork main` after every session. Application repos (`agent-nudge`, `mazos-ui`) strictly forbid pushes to `main` and require `agents/*` branches.
+  _Resolution:_ Repo constitution overrides. `claude-obsidian` requires a push to `fork main` after every session. Application repos (`agent-nudge`, `mazos-ui`) strictly forbid pushes to `main` and require `agents/*` branches.
 
 ## 8. Provenance & Confidence
 
-| Rule / Preference | Source File | Repositories | Direct/Inferred | Confidence |
-|---|---|---|---|---|
-| Evidence before claims (Verify via build/test before success) | `2026-07-20-agent-nudge-super-x10-build-prompt.md`, `recall/AGENTS.md`, `mazos-ui/AGENTS.md` | 3+ | Explicit | **High** |
-| Work on `agents/*` branches; no push to `main` | `agent-nudge/AGENTS.md`, `mazos-ui/AGENTS.md` | 4+ | Explicit | **High** |
-| Vault: Read AGENTS.md/Indexes first, no bulk load | `mazos-ui/AGENTS.md`, `claude-obsidian/AGENTS.md`, `JobFilter-Obsidian-Vault/AGENTS.md` | 3+ | Explicit | **High** |
-| Brutalist/Industrial UI preference | `JobFilterV1/PRODUCT.md`, `scrap-finance-partners/AGENTS.md` | 2 | Explicit | **High** |
-| Separation of PLAN and BUILD passes | `mazos-ui/AGENTS.md` | 1 | Explicit | Medium (Confined to MAZos workflow) |
-| Codex: Use `codebase-memory-mcp` | `~/.codex/AGENTS.md` | 1 | Explicit | Low (Tool-specific, not personal default) |
-| Local-first / No cloud accounts | `agent-nudge/AGENTS.md`, `openflowkit/AGENTS.md` | 2 | Explicit | Medium (Project-specific architecture, not global) |
+| Rule / Preference                                             | Source File                                                                                  | Repositories | Direct/Inferred | Confidence                                         |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------ | --------------- | -------------------------------------------------- |
+| Evidence before claims (Verify via build/test before success) | `2026-07-20-agent-nudge-super-x10-build-prompt.md`, `recall/AGENTS.md`, `mazos-ui/AGENTS.md` | 3+           | Explicit        | **High**                                           |
+| Work on `agents/*` branches; no push to `main`                | `agent-nudge/AGENTS.md`, `mazos-ui/AGENTS.md`                                                | 4+           | Explicit        | **High**                                           |
+| Vault: Read AGENTS.md/Indexes first, no bulk load             | `mazos-ui/AGENTS.md`, `claude-obsidian/AGENTS.md`, `JobFilter-Obsidian-Vault/AGENTS.md`      | 3+           | Explicit        | **High**                                           |
+| Brutalist/Industrial UI preference                            | `JobFilterV1/PRODUCT.md`, `scrap-finance-partners/AGENTS.md`                                 | 2            | Explicit        | **High**                                           |
+| Separation of PLAN and BUILD passes                           | `mazos-ui/AGENTS.md`                                                                         | 1            | Explicit        | Medium (Confined to MAZos workflow)                |
+| Codex: Use `codebase-memory-mcp`                              | `~/.codex/AGENTS.md`                                                                         | 1            | Explicit        | Low (Tool-specific, not personal default)          |
+| Local-first / No cloud accounts                               | `agent-nudge/AGENTS.md`, `openflowkit/AGENTS.md`                                             | 2            | Explicit        | Medium (Project-specific architecture, not global) |
 
 ## 9. Proposed Structured `MazPromptProfile` Schema
 

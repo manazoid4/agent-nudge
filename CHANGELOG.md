@@ -25,7 +25,7 @@ All notable Agent Nudge changes are recorded here. Dates use ISO 8601.
 ### Changed
 
 - Rebuilt the compiler screen as a high-contrast navy/yellow operations workbench.
-- Simplified the public offer to Community at $0 and Pro at $29/year while commercial validation continues.
+- Kept Community free and moved the paid offer into validation: $29 one-time founding beta, $49 one-time Personal, and optional paid updates after the included year.
 - Updated the public message to “Context assurance for your coding agents.”
 - Added loopback endpoint overrides for isolated desktop and release smoke tests.
 - Updated daemon, Electron, CLI, and package versions to 0.5.0.

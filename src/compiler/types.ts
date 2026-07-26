@@ -1,10 +1,11 @@
 export type PromptMode = "RESEARCH" | "PLAN" | "BUILD" | "REVIEW" | "RESUME";
 
-export type AgentRole = "Claude" | "Codex" | "OpenCode" | "Grok" | "Hermes" | "Generic";
+export type AgentRole =
+  "Claude" | "Codex" | "OpenCode" | "Grok" | "Hermes" | "Generic";
 
 export type OutputVerbosity = "concise" | "standard" | "detailed";
 
-export type ResolutionLevel = 
+export type ResolutionLevel =
   | "TaskInstruction"
   | "RepoConstitution"
   | "ProjectPreference"
@@ -12,7 +13,8 @@ export type ResolutionLevel =
   | "HistoricalPattern"
   | "ModelSuggestion";
 
-export type RuleScope = "personal" | "project" | "tool" | "temporary" | "historical";
+export type RuleScope =
+  "personal" | "project" | "tool" | "temporary" | "historical";
 
 export type RuleStatus = "approved" | "candidate" | "rejected" | "disabled";
 
@@ -54,6 +56,10 @@ export interface ResolvedContext {
   sources: ContextSource[];
   skippedSources: SkippedSource[];
   activeRules: ProfileRule[];
-  conflictsSurfaced: { overwrittenId: string; winnerId: string; reason: string }[];
+  conflictsSurfaced: {
+    overwrittenId: string;
+    winnerId: string;
+    reason: string;
+  }[];
   digest: string;
 }

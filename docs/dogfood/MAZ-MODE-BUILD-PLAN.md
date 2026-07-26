@@ -18,6 +18,7 @@ Build the first dogfood specification for a personal Agent Brief Compiler design
 ## Implementation Batches
 
 ### Batch 1: CLI and Configuration Ingestion
+
 - **Goal**: Discover and read repository-level configuration alongside global personal profile settings.
 - **Files likely affected**: `src/cli/index.ts`, `src/config/loader.ts`, `src/config/schema.ts`
 - **Dependencies**: None.
@@ -26,6 +27,7 @@ Build the first dogfood specification for a personal Agent Brief Compiler design
 - **Explicit exclusions**: Do not implement prompt generation, resolution logic, or LLM integrations yet.
 
 ### Batch 2: Conflict Resolution Engine
+
 - **Goal**: Apply the personal-profile precedence hierarchy to overlapping or conflicting rules.
 - **Files likely affected**: `src/compiler/resolver.ts`, `src/compiler/types.ts`
 - **Dependencies**: Batch 1
@@ -34,6 +36,7 @@ Build the first dogfood specification for a personal Agent Brief Compiler design
 - **Explicit exclusions**: Do not interact with the file system or format markdown output.
 
 ### Batch 3: Mode-Specific Generation
+
 - **Goal**: Format the resolved configuration into mode-specific markdown templates (e.g., Build, Orchestration, Handoff).
 - **Files likely affected**: `src/compiler/generator.ts`, `src/templates/`
 - **Dependencies**: Batch 2
@@ -42,6 +45,7 @@ Build the first dogfood specification for a personal Agent Brief Compiler design
 - **Explicit exclusions**: Do not implement interactive editing or TUI components.
 
 ### Batch 4: Interactive Review and Artifact Storage
+
 - **Goal**: Provide a CLI flow to review, edit, and locally store the generated brief and its outcome.
 - **Files likely affected**: `src/cli/interactive.ts`, `src/storage/history.ts`
 - **Dependencies**: Batch 3
