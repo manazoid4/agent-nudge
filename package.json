@@ -1,6 +1,6 @@
 {
   "name": "agent-nudge",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Pre-action context assurance for AI coding agents",
   "author": "manazoid4",
@@ -37,6 +37,7 @@
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "stripe": "^19.3.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -58,6 +59,7 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
+    "@hono/node-server": "^2.0.11",
     "esbuild": "^0.28.1"
   },
   "build": {

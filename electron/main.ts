@@ -9,6 +9,15 @@ let tray: Tray | null = null;
 let database: NudgeDatabase | null = null;
 let server: ReturnType<typeof createServer> | null = null;
 let isQuitting = false;
+const portArgument = process.argv
+  .find((argument) => argument.startsWith("--agent-nudge-port="))
+  ?.split("=", 2)[1];
+const daemonPort = Number(
+  portArgument ?? process.env.AGENT_NUDGE_PORT ?? 47831,
+);
+if (!Number.isInteger(daemonPort) || daemonPort < 1024 || daemonPort > 65_535)
+  throw new Error("invalid_agent_nudge_port");
+const daemonEndpoint = `http://127.0.0.1:${daemonPort}`;
 
 const singleInstance = app.requestSingleInstanceLock();
 if (!singleInstance) app.quit();
@@ -25,10 +34,10 @@ app.whenReady().then(async () => {
   database = new NudgeDatabase(resolveDatabasePath());
   server = createServer(database);
   try {
-    await server.listen({ host: "127.0.0.1", port: 47831 });
+    await server.listen({ host: "127.0.0.1", port: daemonPort });
   } catch (error) {
     if (!String(error).includes("EADDRINUSE")) throw error;
-    const response = await fetch("http://127.0.0.1:47831/health", {
+    const response = await fetch(`${daemonEndpoint}/health`, {
       signal: AbortSignal.timeout(750),
     });
     const health = (await response.json()) as {
@@ -41,10 +50,10 @@ app.whenReady().then(async () => {
       !response.ok ||
       !health.ok ||
       health.service !== "agent-nudge" ||
-      health.version !== "0.4.0" ||
+      health.version !== "0.5.0" ||
       health.localOnly !== true
     )
-      throw new Error("port_47831_is_not_compatible_agent_nudge");
+      throw new Error(`port_${daemonPort}_is_not_compatible_agent_nudge`);
   }
   createWindow();
   createTray();
@@ -68,7 +77,7 @@ function createWindow() {
     },
   });
   void window.loadFile(join(__dirname, "..", "dist-web", "index.html"), {
-    query: { desktop: "1" },
+    query: { desktop: "1", endpoint: daemonEndpoint },
   });
   window.once("ready-to-show", () => window?.show());
   window.on("close", (event) => {
@@ -100,8 +109,7 @@ function createTray() {
       },
       {
         label: "Run proof demo",
-        click: () =>
-          void fetch("http://127.0.0.1:47831/demo", { method: "POST" }),
+        click: () => void fetch(`${daemonEndpoint}/demo`, { method: "POST" }),
       },
       { type: "separator" },
       {

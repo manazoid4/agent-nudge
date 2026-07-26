@@ -99,6 +99,32 @@ export class NudgeDatabase {
     return Number(result.lastInsertRowid);
   }
 
+  setSetting(key: string, value: unknown) {
+    this.db
+      .prepare(
+        `
+        INSERT INTO settings(key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = excluded.updated_at
+      `,
+      )
+      .run(key, JSON.stringify(value), new Date().toISOString());
+    return value;
+  }
+
+  getSetting<T>(key: string): T | undefined {
+    const row = this.db
+      .prepare("SELECT value FROM settings WHERE key = ?")
+      .get(key) as { value: string } | undefined;
+    return row ? (JSON.parse(row.value) as T) : undefined;
+  }
+
+  deleteSetting(key: string) {
+    return this.db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+  }
+
   put(
     kind: StoredKind,
     value: {
