@@ -1,6 +1,6 @@
 {
   "name": "agent-nudge",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Pre-action context assurance for AI coding agents",
   "author": "manazoid4",

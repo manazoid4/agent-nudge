@@ -57,6 +57,19 @@ const endpoint =
   safeEndpointOverride ??
   window.agentNudge?.endpoint ??
   "http://127.0.0.1:47831";
+async function daemonFetch(path: string, init: RequestInit = {}) {
+  if (window.agentNudge?.request) {
+    const result = await window.agentNudge.request(path, {
+      method: init.method,
+      body: typeof init.body === "string" ? init.body : undefined,
+    });
+    return new Response(result.body, {
+      status: result.status,
+      headers: { "content-type": result.contentType },
+    });
+  }
+  return fetch(`${endpoint}${path}`, init);
+}
 const isDesktop =
   Boolean(window.agentNudge) ||
   new URLSearchParams(location.search).has("desktop");
@@ -434,8 +447,8 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
     if (isPublicDemo) return;
     try {
       const [response, portfolioResponse] = await Promise.all([
-        fetch(`${endpoint}/snapshot?projectId=project-agent-nudge`),
-        fetch(`${endpoint}/portfolio`),
+        daemonFetch("/snapshot?projectId=project-agent-nudge"),
+        daemonFetch("/portfolio"),
       ]);
       if (!response.ok) throw new Error("offline");
       const data = (await response.json()) as Snapshot;
@@ -514,7 +527,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           },
         ];
         for (const session of sessions) {
-          const response = await fetch(`${endpoint}/v1/sessions/check-in`, {
+          const response = await daemonFetch("/v1/sessions/check-in", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -526,7 +539,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           });
           if (!response.ok) throw new Error("check-in failed");
         }
-        const claim = await fetch(`${endpoint}/v1/claims`, {
+        const claim = await daemonFetch("/v1/claims", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -537,7 +550,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
           }),
         });
         if (!claim.ok) throw new Error("claim failed");
-        const synced = await fetch(`${endpoint}/v1/sync`, {
+        const synced = await daemonFetch("/v1/sync", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -562,7 +575,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
       try {
         const response =
           actionName === "acknowledge"
-            ? await fetch(`${endpoint}/v1/nudges/${selected.id}/acknowledge`, {
+            ? await daemonFetch(`/v1/nudges/${selected.id}/acknowledge`, {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({
@@ -570,7 +583,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   sessionId: selected.recipientSessionId,
                 }),
               })
-            : await fetch(`${endpoint}/nudges/${selected.id}/action`, {
+            : await daemonFetch(`/nudges/${selected.id}/action`, {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({ action: actionName }),
@@ -643,7 +656,7 @@ function Console({ isPublicDemo }: { isPublicDemo: boolean }) {
                   : "Daemon offline"}
             </span>
           </div>
-          <small>{window.agentNudge?.version ?? "v0.5.0"}</small>
+          <small>{window.agentNudge?.version ?? "v0.5.1"}</small>
         </div>
       </aside>
       <div className="workspace" id="main-workspace">
@@ -1592,6 +1605,18 @@ function ChangelogPage() {
         <article>
           <time>26 July 2026</time>
           <div>
+            <span>v0.5.1 security beta</span>
+            <h2>Local control is authenticated</h2>
+            <p>
+              Per-installation credentials, hostile Host and Origin rejection, a
+              sandboxed Electron request bridge, authenticated daemon health
+              proofs, safe credential rotation, and token-leak regressions.
+            </p>
+          </div>
+        </article>
+        <article>
+          <time>26 July 2026</time>
+          <div>
             <span>v0.5.0 beta</span>
             <h2>Context assurance workbench</h2>
             <p>
@@ -1995,7 +2020,7 @@ function CompilerView({ isPublicDemo }: { isPublicDemo: boolean }) {
     async <T,>(path: string, init?: RequestInit) => {
       if (isPublicDemo)
         throw new Error("Open the desktop app to use local tools.");
-      const response = await fetch(`${endpoint}${path}`, init);
+      const response = await daemonFetch(path, init);
       const body = (await response.json()) as T & { error?: string };
       if (!response.ok)
         throw new Error(body.error ?? `Request failed (${response.status})`);

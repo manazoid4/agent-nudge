@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { createServer } from "../../src/daemon/server.js";
+import { createTestServer } from "../helpers/server.js";
 import { createMcpServer } from "../../src/mcp/tools.js";
 import { NudgeDatabase } from "../../src/storage/database.js";
 
@@ -26,7 +26,7 @@ const checkIn = (sessionId: string, projectId = "project-live") => ({
 describe("v1 live sync loop", () => {
   it("fans out facts, tracks cursors, and clears a path HOLD on release", async () => {
     const database = new NudgeDatabase(":memory:");
-    const app = createServer(database);
+    const app = createTestServer(database);
     close.push(async () => {
       await app.close();
       database.close();

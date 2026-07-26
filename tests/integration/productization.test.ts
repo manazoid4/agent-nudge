@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createServer } from "../../src/daemon/server.js";
+import { createTestServer } from "../helpers/server.js";
 import { LicenseService } from "../../src/licensing/index.js";
 import { RunnerService } from "../../src/runners/service.js";
 import { NudgeDatabase } from "../../src/storage/database.js";
@@ -33,7 +33,7 @@ describe("commercial product API", () => {
     const license = new LicenseService({
       statePath: join(directory, "license-state.json"),
     });
-    const app = createServer(database, {
+    const app = createTestServer(database, {
       license,
       runners: new RunnerService(),
     });
@@ -96,7 +96,7 @@ describe("commercial product API", () => {
 
   it("rejects untrusted browser origins before local routes execute", async () => {
     const database = new NudgeDatabase(":memory:");
-    const app = createServer(database);
+    const app = createTestServer(database);
     cleanup.push(async () => {
       await app.close();
       database.close();

@@ -4,6 +4,14 @@ All notable Agent Nudge changes are recorded here. Dates use ISO 8601.
 
 ## [Unreleased]
 
+### Security
+
+- Authenticated every local daemon request with a cryptographically random per-installation credential stored outside repositories with owner-only permissions.
+- Rejected hostile `Host` values and removed the Electron renderer's former `Origin: null` exception.
+- Added a sandboxed Electron main-process request bridge so the renderer never receives local control credentials.
+- Added daemon instance identity, challenge-response health verification, atomic credential rotation, and leakage/impersonation regressions.
+- Documented the local control-plane threat model, credential storage, diagnostics, rotation, and recovery.
+
 ### Commercial validation
 
 - Auditing one-time pricing, the 14-day Pro trial, email-list capture, and the long-term moat roadmap before changing the live offer.

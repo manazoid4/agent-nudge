@@ -6,7 +6,7 @@ import {
   providerHookOutput,
   runProviderHook,
 } from "../../src/adapters/hook-runner.js";
-import { createServer } from "../../src/daemon/server.js";
+import { createTestServer } from "../helpers/server.js";
 import { NudgeDatabase } from "../../src/storage/database.js";
 
 const cleanup: Array<() => Promise<void>> = [];
@@ -17,7 +17,7 @@ afterEach(async () => {
 describe("provider hook bridge", () => {
   it("turns a live exact-path collision into a provider-compatible denial", async () => {
     const database = new NudgeDatabase(":memory:");
-    const app = createServer(database);
+    const app = createTestServer(database);
     const address = await app.listen({ host: "127.0.0.1", port: 0 });
     cleanup.push(async () => {
       await app.close();
@@ -30,6 +30,7 @@ describe("provider hook bridge", () => {
       projectRoot: "C:\\Projects\\hook",
       endpoint: address,
       stateDir,
+      authorization: app.controlAuthorization,
     };
 
     const claude = await runProviderHook({
