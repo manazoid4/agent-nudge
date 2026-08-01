@@ -21,7 +21,9 @@ describe("voice-note ingestion", () => {
 \`\`\``);
 
     await expect(
-      ingestVoiceNote("  research the scrapr first  ", { complete }),
+      ingestVoiceNote("  kodaks research the pulse filter first  ", {
+        complete,
+      }),
     ).resolves.toEqual([
       {
         title: "Research scraper",
@@ -32,7 +34,7 @@ describe("voice-note ingestion", () => {
     expect(complete).toHaveBeenCalledWith(
       expect.objectContaining({
         temperature: 0,
-        userPrompt: "research the scrapr first",
+        userPrompt: "Codex research the posts filter first",
         systemPrompt: expect.stringContaining("untrusted"),
       }),
     );
@@ -81,6 +83,16 @@ describe("voice-note ingestion", () => {
         headers: expect.objectContaining({ authorization: "Bearer secret" }),
       }),
     );
+    const requestBody = JSON.parse(
+      String((fetch.mock.calls[0]![1] as RequestInit).body),
+    );
+    expect(requestBody).toMatchObject({
+      reasoning_effort: "none",
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "ingest_tasks", strict: true },
+      },
+    });
     expect(IngestError).toBeTypeOf("function");
   });
 

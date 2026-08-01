@@ -48,12 +48,13 @@ export async function ingestVoiceNote(
   const note = rawText.trim();
   if (!note || note.length > 20_000)
     throw new IngestError("invalid_input", "Voice note is empty or too long.");
+  const normalizedNote = normalizeKnownDictation(note);
 
   let output: string;
   try {
     output = await model.complete({
       systemPrompt: INGEST_SYSTEM_PROMPT,
-      userPrompt: note,
+      userPrompt: normalizedNote,
       temperature: 0,
     });
   } catch (error) {
@@ -84,6 +85,14 @@ export async function ingestVoiceNote(
       "Model output was not a valid task list.",
     );
   return parsed.data;
+}
+
+function normalizeKnownDictation(note: string): string {
+  const codingAgentContext = /\b(?:codex|kodak(?:'s|s))\b/i.test(note);
+  const normalized = note.replace(/\bkodak(?:'s|s)\b/gi, "Codex");
+  return codingAgentContext
+    ? normalized.replace(/\bpulse filter\b/gi, "posts filter")
+    : normalized;
 }
 
 export type OpenAICompatibleIngestModelOptions = {
@@ -119,6 +128,32 @@ export function createOpenAICompatibleIngestModel(
           body: JSON.stringify({
             model: options.model,
             temperature: input.temperature,
+            reasoning_effort: "none",
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "ingest_tasks",
+                strict: true,
+                schema: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 25,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["title", "objective", "suggestedMode"],
+                    properties: {
+                      title: { type: "string" },
+                      objective: { type: "string" },
+                      suggestedMode: {
+                        type: "string",
+                        enum: ["RESEARCH", "PLAN", "BUILD", "REVIEW"],
+                      },
+                    },
+                  },
+                },
+              },
+            },
             messages: [
               { role: "system", content: input.systemPrompt },
               { role: "user", content: input.userPrompt },
