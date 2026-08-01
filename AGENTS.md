@@ -6,3 +6,5 @@
 - Keep relevance deterministic and explainable unless a future feature is clearly optional.
 - Run lint, format check, typecheck, unit, integration, E2E, build, demo, doctor, and Windows packaging before completion claims.
 - Product/design context lives in `PRODUCT.md` and `DESIGN.md`.
+- Brief Compiler planning and dogfood artifacts live under `docs/dogfood/`.
+- Useful compiler workflows already in repo: `agent-nudge brief`, `agent-nudge compile`, `npm run dev:daemon`, `npm run dev`, and `npm run doctor`.

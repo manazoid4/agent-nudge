@@ -1,54 +1,29 @@
-# Agent Brief Compiler — Dogfood Build Plan
+# Maz Mode — Dogfood Contract
 
-## Objective
+Maz Mode is the private dogfood profile for Agent Nudge Pro. It is not a separate product or visual theme.
 
-Build the first dogfood specification for a personal Agent Brief Compiler designed specifically around Maz’s real AI-agent workflow. The compiler must resolve conflicting instructions and output the smallest verified context delta for an agent.
+## Job
 
-## Minimal Dogfood Workflow
+Give Maz the smallest verified start prompt for the right project and agent, without manually reopening chats, scanning repos, or rebuilding context.
 
-1. Select one of Maz’s repositories.
-2. Enter a task objective.
-3. Select agent and mode.
-4. Combine approved personal defaults with repository rules and current state.
-5. Show included sources and conflicts.
-6. Generate a concise brief.
-7. Let Maz edit, copy or export it.
-8. Store its digest, edits and later outcome.
+## Current baseline
 
-## Implementation Batches
+Agent Nudge v0.5 already provides the compiler, repository health, receipts, bootstrap, changelog, offline licensing, Stripe flow, and allowlisted runner handoffs. Do not rebuild those seams.
 
-### Batch 1: CLI and Configuration Ingestion
+MAZos already provides project ranking, context packs, loop state, decisions, verification commands, and a NOW surface. It becomes the first consumer.
 
-- **Goal**: Discover and read repository-level configuration alongside global personal profile settings.
-- **Files likely affected**: `src/cli/index.ts`, `src/config/loader.ts`, `src/config/schema.ts`
-- **Dependencies**: None.
-- **Acceptance criteria**: CLI can target a local repository path, parse `.agent-profile.json` (or similar) into a typed object, and fail gracefully on missing files.
-- **Validation commands**: `npm run test:unit src/config`, `npm run lint`
-- **Explicit exclusions**: Do not implement prompt generation, resolution logic, or LLM integrations yet.
+## Next paid feature
 
-### Batch 2: Conflict Resolution Engine
+Build **Session Start Assurance**:
 
-- **Goal**: Apply the personal-profile precedence hierarchy to overlapping or conflicting rules.
-- **Files likely affected**: `src/compiler/resolver.ts`, `src/compiler/types.ts`
-- **Dependencies**: Batch 1
-- **Acceptance criteria**: Given a mock set of conflicting rules (e.g., "Autonomous" vs "Stop at uncertainty"), the resolver drops lower-tier rules according to the hierarchy and emits a structured conflict report.
-- **Validation commands**: `npm run test:unit src/compiler/resolver.test.ts`
-- **Explicit exclusions**: Do not interact with the file system or format markdown output.
+- rank up to three Resume/Review/Start cards from current structured evidence;
+- render a deterministic, source-backed start prompt;
+- show it in MAZos with copy/launch actions;
+- record the outcome through Agent Nudge receipts;
+- keep transcripts outside Agent Nudge.
 
-### Batch 3: Mode-Specific Generation
+Canonical scope, safety rules, delivery slices, and ship metrics live in [`../SESSION-START-ASSURANCE.md`](../SESSION-START-ASSURANCE.md).
 
-- **Goal**: Format the resolved configuration into mode-specific markdown templates (e.g., Build, Orchestration, Handoff).
-- **Files likely affected**: `src/compiler/generator.ts`, `src/templates/`
-- **Dependencies**: Batch 2
-- **Acceptance criteria**: The system generates a valid markdown brief containing the resolved rules, task objective, and a list of included sources.
-- **Validation commands**: `npm run test:unit src/compiler/generator.test.ts`
-- **Explicit exclusions**: Do not implement interactive editing or TUI components.
+## Daily proof
 
-### Batch 4: Interactive Review and Artifact Storage
-
-- **Goal**: Provide a CLI flow to review, edit, and locally store the generated brief and its outcome.
-- **Files likely affected**: `src/cli/interactive.ts`, `src/storage/history.ts`
-- **Dependencies**: Batch 3
-- **Acceptance criteria**: The user can preview the generated brief, accept it, and the system saves a digest and the final output to a local SQLite database or flat-file ledger.
-- **Validation commands**: `npm run test:integration`
-- **Explicit exclusions**: Do not build a graphical Web UI, Electron app, or remote sync service. CLI only for the minimal dogfood flow.
+The feature succeeds only if Maz uses it on five of seven dogfood days and reaches a useful agent prompt in under 30 seconds. Otherwise reduce or remove it; do not add more panels.
