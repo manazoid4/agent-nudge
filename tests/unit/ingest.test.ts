@@ -17,20 +17,23 @@ describe("voice-note ingestion", () => {
 
   it("normalizes model output through a provider-neutral boundary", async () => {
     const complete = vi.fn().mockResolvedValue(`\`\`\`json
-[{"title":"Research scraper","objective":"Research a reliable scraper before implementation.","suggestedMode":"RESEARCH"}]
+{"cleanedText":"Codex: research the posts filter first.","tasks":[{"id":"research-posts-filter","title":"Research posts filter","objective":"Resolve the posts-filter requirements.","suggestedMode":"RESEARCH","dependencies":[]}]}
 \`\`\``);
 
-    await expect(
-      ingestVoiceNote("  kodaks research the pulse filter first  ", {
-        complete,
-      }),
-    ).resolves.toEqual([
-      {
-        title: "Research scraper",
-        objective: "Research a reliable scraper before implementation.",
-        suggestedMode: "RESEARCH",
-      },
-    ]);
+    const raw = "  kodaks research the pulse filter first  ";
+    await expect(ingestVoiceNote(raw, { complete })).resolves.toEqual({
+      originalText: raw,
+      cleanedText: "Codex: research the posts filter first.",
+      tasks: [
+        {
+          id: "research-posts-filter",
+          title: "Research posts filter",
+          objective: "Resolve the posts-filter requirements.",
+          suggestedMode: "RESEARCH",
+          dependencies: [],
+        },
+      ],
+    });
     expect(complete).toHaveBeenCalledWith(
       expect.objectContaining({
         temperature: 0,
@@ -90,7 +93,27 @@ describe("voice-note ingestion", () => {
       reasoning_effort: "none",
       response_format: {
         type: "json_schema",
-        json_schema: { name: "ingest_tasks", strict: true },
+        json_schema: {
+          name: "ingest_task_dag",
+          strict: true,
+          schema: {
+            type: "object",
+            required: ["cleanedText", "tasks"],
+            properties: {
+              tasks: {
+                items: {
+                  required: [
+                    "id",
+                    "title",
+                    "objective",
+                    "suggestedMode",
+                    "dependencies",
+                  ],
+                },
+              },
+            },
+          },
+        },
       },
     });
     expect(IngestError).toBeTypeOf("function");
@@ -145,5 +168,83 @@ describe("voice-note ingestion", () => {
     ).rejects.toEqual(
       expect.objectContaining({ code: "invalid_model_response" }),
     );
+  });
+
+  it("returns an authoritative raw note with a validated task DAG", async () => {
+    const raw = "  kodaks research the pulse filter then build it  ";
+    const complete = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        cleanedText: "Codex: research the posts filter, then build it.",
+        tasks: [
+          {
+            id: "research-posts-filter",
+            title: "Research posts filter",
+            objective: "Resolve the unknown posts-filter behavior.",
+            suggestedMode: "RESEARCH",
+            dependencies: [],
+          },
+          {
+            id: "build-posts-filter",
+            title: "Build posts filter slice",
+            objective:
+              "Deliver a working posts filter through the UI boundary.",
+            suggestedMode: "BUILD",
+            dependencies: ["research-posts-filter"],
+          },
+        ],
+      }),
+    );
+
+    await expect(ingestVoiceNote(raw, { complete })).resolves.toEqual({
+      originalText: raw,
+      cleanedText: "Codex: research the posts filter, then build it.",
+      tasks: expect.arrayContaining([
+        expect.objectContaining({
+          id: "build-posts-filter",
+          dependencies: ["research-posts-filter"],
+        }),
+      ]),
+    });
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userPrompt: "Codex research the posts filter then build it",
+        systemPrompt: expect.stringMatching(
+          /phonetic|vertical slice|dependencies/i,
+        ),
+      }),
+    );
+  });
+
+  it("surfaces safe DAG validation reasons without echoing model output", async () => {
+    const invalidOutput = JSON.stringify({
+      cleanedText: "Build both tasks.",
+      tasks: [
+        {
+          id: "first",
+          title: "First",
+          objective: "Deliver first.",
+          suggestedMode: "BUILD",
+          dependencies: ["second"],
+        },
+        {
+          id: "second",
+          title: "Second",
+          objective: "Deliver second.",
+          suggestedMode: "BUILD",
+          dependencies: ["first"],
+        },
+      ],
+      secret: "do-not-log-this",
+    });
+
+    await expect(
+      ingestVoiceNote("build both tasks", {
+        complete: async () => invalidOutput,
+      }),
+    ).rejects.toMatchObject({
+      code: "invalid_task_schema",
+      details: expect.arrayContaining(["dependency_cycle"]),
+      message: expect.not.stringContaining("do-not-log-this"),
+    });
   });
 });
