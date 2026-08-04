@@ -9,20 +9,20 @@
 
 ### What YouMind Actually Is
 
-YouMind positions itself as an **"AI Creation Studio"** — not a chat wrapper, not a note-taking tool, not a document editor. Singapore-based (MIND MOTOR PTE. LTD.), two years from beta to 1.0 (launched June 15, 2026). Their north star: **"Create bolder."** They describe themselves as *"magic paper and pen for the AI age"* rather than a tool that does the work for you.
+YouMind positions itself as an **"AI Creation Studio"** — not a chat wrapper, not a note-taking tool, not a document editor. Singapore-based (MIND MOTOR PTE. LTD.), two years from beta to 1.0 (launched June 15, 2026). Their north star: **"Create bolder."** They describe themselves as _"magic paper and pen for the AI age"_ rather than a tool that does the work for you.
 
 ### The 6 Creation Pillars
 
-| Pillar | Notes |
-|---|---|
-| **Writing** | Built-in skill packs for 6 genres (Essay, Story, Professional, etc.) + precision editing |
+| Pillar               | Notes                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Writing**          | Built-in skill packs for 6 genres (Essay, Story, Professional, etc.) + precision editing               |
 | **Image Generation** | Integrated with aesthetic style packs (Serif & Void Minimal, Italian Vintage, Oriental Shanshui, etc.) |
-| **Audio/Video** | Supported but less documented on public pages |
-| **Slides** | Full slide editor with presentation templates, multiple style themes |
-| **Webpages** | In-app webpage creation |
-| **Learning** | Research boards, source gathering, structured reports |
+| **Audio/Video**      | Supported but less documented on public pages                                                          |
+| **Slides**           | Full slide editor with presentation templates, multiple style themes                                   |
+| **Webpages**         | In-app webpage creation                                                                                |
+| **Learning**         | Research boards, source gathering, structured reports                                                  |
 
-The differentiation claim: *"Most AI agents can do these things too — but their output tends to feel generic. Same sentence patterns, same color palettes, same rhythm."* YouMind embeds aesthetic standards and creative know-how into each domain.
+The differentiation claim: _"Most AI agents can do these things too — but their output tends to feel generic. Same sentence patterns, same color palettes, same rhythm."_ YouMind embeds aesthetic standards and creative know-how into each domain.
 
 ### The Feature That Matters Most: Skills Marketplace
 
@@ -35,7 +35,7 @@ This is the standout. Not a plugin store, not an API marketplace — **a skills 
 - Skills can generate webpages, use multi-agent architectures, run complex workflows
 - Featured packs like "Design studio" giving you a visual design team
 
-This is **User-Generated Capability** — not just UGC content, but UGC *tools*. That's a moat.
+This is **User-Generated Capability** — not just UGC content, but UGC _tools_. That's a moat.
 
 ### Prompt Library: 30,000+ Prompts
 
@@ -44,6 +44,7 @@ Updated daily, 100% free. Curated packs (FIFA 2026 Selfie Pack). Browseable by m
 ### Core Architecture: IPO Flow
 
 **Input → Process → Output** is the organising principle:
+
 - **Input**: Research boards, source gathering, file uploads, web links
 - **Process**: Skills, agents, prompts, multi-step pipelines
 - **Output**: Writing, images, slides, video, webpages, learning artifacts
@@ -83,7 +84,7 @@ Not publicly detailed without sign-in but they have a pricing page. Free tier ex
 
 1. **No sticky navigation**. Links in hero anchor to #work, #build, #about, #contact — but once you scroll past the hero, there's no persistent nav. You have to scroll all the way back up or use browser back. This is the single biggest UX gap.
 
-2. **No visible brand colour**. Everything is black/white/grey. This works for minimalism but without *any* accent colour the page feels unfinished rather than intentionally minimal. Even a single accent colour on CTAs, links, or section dividers would help.
+2. **No visible brand colour**. Everything is black/white/grey. This works for minimalism but without _any_ accent colour the page feels unfinished rather than intentionally minimal. Even a single accent colour on CTAs, links, or section dividers would help.
 
 3. **Hero section has no visual hook**. The hero is pure text. No illustration, no animation, no background pattern, no profile photo. For a portfolio, the hero is the first impression — it needs something visual.
 
@@ -121,18 +122,18 @@ Not publicly detailed without sign-in but they have a pricing page. Free tier ex
 
 ### Quick Fix Priority
 
-| Priority | Fix | Effort |
-|---|---|---|
-| P0 | Sticky nav (or floating nav on scroll) | Low |
-| P0 | Missing space "PartnersA" typo | Trivial |
-| P1 | Add accent colour to CTAs + links | Low |
-| P1 | Agent Nudge description should mention cross-product, demo link | Low |
-| P1 | Profile photo in hero | Low |
-| P1 | Add missing schema.org structured data | Low |
-| P2 | Expand OpenFlowKit description | Trivial |
-| P2 | Hero visual element (pattern, gradient, or illustration) | Medium |
-| P2 | Consistent "What I changed" across all projects | Low |
-| P3 | Case study expansion / project detail pages | High |
+| Priority | Fix                                                             | Effort  |
+| -------- | --------------------------------------------------------------- | ------- |
+| P0       | Sticky nav (or floating nav on scroll)                          | Low     |
+| P0       | Missing space "PartnersA" typo                                  | Trivial |
+| P1       | Add accent colour to CTAs + links                               | Low     |
+| P1       | Agent Nudge description should mention cross-product, demo link | Low     |
+| P1       | Profile photo in hero                                           | Low     |
+| P1       | Add missing schema.org structured data                          | Low     |
+| P2       | Expand OpenFlowKit description                                  | Trivial |
+| P2       | Hero visual element (pattern, gradient, or illustration)        | Medium  |
+| P2       | Consistent "What I changed" across all projects                 | Low     |
+| P3       | Case study expansion / project detail pages                     | High    |
 
 ---
 
@@ -141,6 +142,7 @@ Not publicly detailed without sign-in but they have a pricing page. Free tier ex
 ### Current State
 
 Agent Nudge is further along than the portfolio suggests:
+
 - **v0.4** with a complete, working coordination loop
 - **SQLite ledger**, localhost Fastify API, MCP server, CLI
 - **Windows installer** (packaged, smoke-tested)
@@ -152,9 +154,11 @@ Agent Nudge is further along than the portfolio suggests:
 ### The Gap
 
 The portfolio describes Agent Nudge as:
+
 > "Windows app that stops AI coding agents colliding or acting on stale information."
 
 This undersells it. It should say something like:
+
 > **Local-first coordination layer for AI coding agents. Prevents Claude, Codex, Cursor, and any future agent from conflicting on the same codebase — without cloud dependency, without transcript capture, without vendor lock-in. Live demo running. Open source.**
 
 ### Why Agent Nudge Is the Portfolio Anchor
@@ -175,15 +179,15 @@ This undersells it. It should say something like:
 
 ### What to Emulate from YouMind
 
-| YouMind Feature | Agent Nudge Takeaway |
-|---|---|
-| **Skills Marketplace** | Agent Nudge could have a nudge rule marketplace — community-shared conflict patterns, relevance recipes, cross-project hooks |
-| **"Create bolder" north star** | Agent Nudge needs a one-liner this strong. "Context before action" is good but not iconic |
-| **IPO flow as organising metaphor** | Agent Nudge's loop (check-in → claim → fan-out → sync → HOLD/REVIEW/CLEAR) is already clean — make it the hero |
-| **UGC earning model** | Not directly applicable at Agent Nudge's stage, but a "community rules" marketplace is a v2 path |
-| **Aesthetic differentiation** | YouMind says "same sentence patterns, same color palettes, same rhythm" about other tools. Agent Nudge can say "same conflicts, same stale decisions, same wasted work" |
-| **Prompt library as traffic driver** | Agent Nudge could publish "agent coordination patterns" as free content — draws the exact target audience |
-| **Multi-format output** | Agent Nudge already does MCP + CLI + Desktop + API — lean into the "works everywhere" story |
+| YouMind Feature                      | Agent Nudge Takeaway                                                                                                                                                    |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Skills Marketplace**               | Agent Nudge could have a nudge rule marketplace — community-shared conflict patterns, relevance recipes, cross-project hooks                                            |
+| **"Create bolder" north star**       | Agent Nudge needs a one-liner this strong. "Context before action" is good but not iconic                                                                               |
+| **IPO flow as organising metaphor**  | Agent Nudge's loop (check-in → claim → fan-out → sync → HOLD/REVIEW/CLEAR) is already clean — make it the hero                                                          |
+| **UGC earning model**                | Not directly applicable at Agent Nudge's stage, but a "community rules" marketplace is a v2 path                                                                        |
+| **Aesthetic differentiation**        | YouMind says "same sentence patterns, same color palettes, same rhythm" about other tools. Agent Nudge can say "same conflicts, same stale decisions, same wasted work" |
+| **Prompt library as traffic driver** | Agent Nudge could publish "agent coordination patterns" as free content — draws the exact target audience                                                               |
+| **Multi-format output**              | Agent Nudge already does MCP + CLI + Desktop + API — lean into the "works everywhere" story                                                                             |
 
 ### What to Fix on Portfolio Before Next Push
 
@@ -213,18 +217,18 @@ This undersells it. It should say something like:
 
 ## Appendix: Source Index
 
-| Source | Key Content |
-|---|---|
-| youmind.com/overview | "Create bolder" hero, 6 pillars, IPO flow, free start |
+| Source                                     | Key Content                                                   |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| youmind.com/overview                       | "Create bolder" hero, 6 pillars, IPO flow, free start         |
 | youmind.com/blog/youmind-1-0-create-bolder | Full 1.0 launch story, philosophy, skills marketplace details |
-| youmind.com/skills | Marketplace, Top 9 curation, creator earnings |
-| youmind.com/prompts | 30,000+ prompts, daily updates, packs |
-| youmind.com/use-cases | Quick start guide, YouTube-to-blog, IPO flow explanation |
-| youmind.com/pricing | Page exists, details behind sign-in |
-| youmind.com/for-agents | Agent-oriented landing page |
-| mazos-site.vercel.app | Full portfolio audit (see Part 2) |
-| agent-nudge/README.md | v0.4 live demo, cross-product, Windows package |
-| agent-nudge/docs/PRODUCT.md | Target user, core loop, pricing research |
-| agent-nudge/BUILD_PLAN.md | 12 completed milestones |
-| agent-nudge/docs/LANDING-COPY.md | "Context before action" headline, CTA variants |
-| agent-nudge/docs/dogfood/ | 12 files: verification, prompt profiling, Maz mode |
+| youmind.com/skills                         | Marketplace, Top 9 curation, creator earnings                 |
+| youmind.com/prompts                        | 30,000+ prompts, daily updates, packs                         |
+| youmind.com/use-cases                      | Quick start guide, YouTube-to-blog, IPO flow explanation      |
+| youmind.com/pricing                        | Page exists, details behind sign-in                           |
+| youmind.com/for-agents                     | Agent-oriented landing page                                   |
+| mazos-site.vercel.app                      | Full portfolio audit (see Part 2)                             |
+| agent-nudge/README.md                      | v0.4 live demo, cross-product, Windows package                |
+| agent-nudge/docs/PRODUCT.md                | Target user, core loop, pricing research                      |
+| agent-nudge/BUILD_PLAN.md                  | 12 completed milestones                                       |
+| agent-nudge/docs/LANDING-COPY.md           | "Context before action" headline, CTA variants                |
+| agent-nudge/docs/dogfood/                  | 12 files: verification, prompt profiling, Maz mode            |
