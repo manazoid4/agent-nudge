@@ -37,7 +37,7 @@ Target WCAG 2.2 AA. Support full keyboard operation, visible focus, high contras
 ## Packaging and Revenue
 
 - **Community — £0:** local daemon, desktop inbox, context packs, CLI/MCP, exports and user-owned adapters.
-- **Pro — £19/month or £190/year:** encrypted personal sync, longer receipt history, cross-device rules and portfolio ROI.
+- **Pro — £19/month or £190/year:** Session Start Assurance, custom operator profiles, multi-repo recovery history, direct runner handoff, encrypted personal sync, longer receipt history and portfolio ROI.
 - **Team — £299/month or £2,990/year:** shared policy, managed connectors, team context mesh, audit exports and 10 seats.
 - **Business — £999/month or £9,990/year:** SSO-ready controls, retention policy, advanced routing, priority support and 50 seats.
 - **Enterprise — £30k–£150k+ annually:** private deployment, SCIM/SSO, compliance evidence, custom connectors, SLAs and deployment support.
