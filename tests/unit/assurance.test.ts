@@ -20,7 +20,9 @@ describe("agent assurance", () => {
   it("marks active agents overdue after the configurable sync interval", () => {
     const result = buildAssurance({
       sessions: [session()],
-      facts: [], nudges: [], receipts: [],
+      facts: [],
+      nudges: [],
+      receipts: [],
       now: new Date("2026-08-13T12:00:00.000Z"),
     });
     expect(result.state).toBe("OVERDUE");
@@ -30,7 +32,9 @@ describe("agent assurance", () => {
   it("does not report dormant agents as failing", () => {
     const result = buildAssurance({
       sessions: [session({ status: "ended" })],
-      facts: [], nudges: [], receipts: [],
+      facts: [],
+      nudges: [],
+      receipts: [],
       now: new Date("2026-08-13T12:00:00.000Z"),
     });
     expect(result.state).toBe("ALL_SYNCED");
@@ -39,8 +43,18 @@ describe("agent assurance", () => {
 
   it("surfaces an evidence-backed question waiting on Maz", () => {
     const result = buildAssurance({
-      sessions: [session({ activeTask: { summary: "Choose the release", paths: [], tags: ["question-for-maz"] } })],
-      facts: [], nudges: [], receipts: [],
+      sessions: [
+        session({
+          activeTask: {
+            summary: "Choose the release",
+            paths: [],
+            tags: ["question-for-maz"],
+          },
+        }),
+      ],
+      facts: [],
+      nudges: [],
+      receipts: [],
       now: new Date("2026-08-13T12:00:00.000Z"),
     });
     expect(result.state).toBe("ATTENTION");

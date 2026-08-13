@@ -1,6 +1,12 @@
-import type { AgentSession, ContextFact, FeedbackReceipt, Nudge } from "./schemas.js";
+import type {
+  AgentSession,
+  ContextFact,
+  FeedbackReceipt,
+  Nudge,
+} from "./schemas.js";
 
-export type AssuranceState = "ALL_SYNCED" | "NEEDS_NUDGE" | "OVERDUE" | "ATTENTION";
+export type AssuranceState =
+  "ALL_SYNCED" | "NEEDS_NUDGE" | "OVERDUE" | "ATTENTION";
 export type AssurancePolicy = { crossSyncDays: number };
 
 type AssuranceInput = {
@@ -35,9 +41,15 @@ export function buildAssurance(input: AssuranceInput) {
         : session.status === "active" && ageMs <= 15 * 60_000
           ? "active"
           : "offline";
-    const facts = input.facts.filter((fact) => fact.authorSessionId === session.id);
-    const nudges = input.nudges.filter((nudge) => nudge.recipientSessionId === session.id);
-    const receipts = input.receipts.filter((receipt) => receipt.sessionId === session.id);
+    const facts = input.facts.filter(
+      (fact) => fact.authorSessionId === session.id,
+    );
+    const nudges = input.nudges.filter(
+      (nudge) => nudge.recipientSessionId === session.id,
+    );
+    const receipts = input.receipts.filter(
+      (receipt) => receipt.sessionId === session.id,
+    );
     const lastContextUpdate = latest(facts.map((fact) => fact.effectiveAt));
     const lastCrossSync = latest([
       ...receipts.map((receipt) => receipt.at),
@@ -46,7 +58,9 @@ export function buildAssurance(input: AssuranceInput) {
     const baseline = lastCrossSync ?? lastContextUpdate ?? session.startedAt;
     const nextSyncDue =
       sessionState === "active"
-        ? new Date(Date.parse(baseline) + policy.crossSyncDays * DAY_MS).toISOString()
+        ? new Date(
+            Date.parse(baseline) + policy.crossSyncDays * DAY_MS,
+          ).toISOString()
         : undefined;
     const outstanding = nudges.filter((nudge) =>
       ["queued", "delivered", "snoozed"].includes(nudge.state),
@@ -54,12 +68,18 @@ export function buildAssurance(input: AssuranceInput) {
     const requiresAttention = outstanding.some((nudge) =>
       ["BLOCK", "ACT_NOW"].includes(nudge.deliveryClass),
     );
-    const taskTags = session.activeTask?.tags.map((tag) => tag.toLowerCase()) ?? [];
+    const taskTags =
+      session.activeTask?.tags.map((tag) => tag.toLowerCase()) ?? [];
     const waiting =
       sessionState === "active" &&
-      taskTags.some((tag) => ["waiting", "blocked", "needs-input", "question-for-maz"].includes(tag));
-    const questionForMaz = taskTags.includes("question-for-maz") || taskTags.includes("needs-input");
-    const overdueMs = nextSyncDue ? now.getTime() - Date.parse(nextSyncDue) : -1;
+      taskTags.some((tag) =>
+        ["waiting", "blocked", "needs-input", "question-for-maz"].includes(tag),
+      );
+    const questionForMaz =
+      taskTags.includes("question-for-maz") || taskTags.includes("needs-input");
+    const overdueMs = nextSyncDue
+      ? now.getTime() - Date.parse(nextSyncDue)
+      : -1;
     const state: AssuranceState =
       sessionState !== "active"
         ? "ALL_SYNCED"
@@ -76,7 +96,8 @@ export function buildAssurance(input: AssuranceInput) {
       provider: session.provider,
       projectId: session.projectId,
       projectName: session.projectName,
-      locality: session.extensionMetadata.locality === "cloud" ? "cloud" : "local",
+      locality:
+        session.extensionMetadata.locality === "cloud" ? "cloud" : "local",
       sessionState,
       activityState:
         sessionState !== "active"
@@ -109,7 +130,8 @@ export function buildAssurance(input: AssuranceInput) {
   };
   agents.sort((left, right) => rank[right.state] - rank[left.state]);
   const state = agents.reduce<AssuranceState>(
-    (current, agent) => (rank[agent.state] > rank[current] ? agent.state : current),
+    (current, agent) =>
+      rank[agent.state] > rank[current] ? agent.state : current,
     "ALL_SYNCED",
   );
   return {
@@ -120,10 +142,13 @@ export function buildAssurance(input: AssuranceInput) {
     counts: {
       total: agents.length,
       active: agents.filter((agent) => agent.sessionState === "active").length,
-      working: agents.filter((agent) => agent.activityState === "working").length,
-      waiting: agents.filter((agent) => agent.activityState === "waiting").length,
+      working: agents.filter((agent) => agent.activityState === "working")
+        .length,
+      waiting: agents.filter((agent) => agent.activityState === "waiting")
+        .length,
       questionForMaz: agents.filter((agent) => agent.questionForMaz).length,
-      needsNudge: agents.filter((agent) => agent.state === "NEEDS_NUDGE").length,
+      needsNudge: agents.filter((agent) => agent.state === "NEEDS_NUDGE")
+        .length,
       overdue: agents.filter((agent) => agent.state === "OVERDUE").length,
       attention: agents.filter((agent) => agent.state === "ATTENTION").length,
     },

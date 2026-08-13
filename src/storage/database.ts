@@ -843,16 +843,20 @@ export class NudgeDatabase {
       deliveryClass: "ACT_NOW",
       state: "queued",
       relevanceScore: 100,
-      relevanceFactors: [{
-        code: "explicit_assurance_request",
-        label: "Explicit assurance request",
-        score: 100,
-        evidence: "Requested through the authenticated assurance API",
-      }],
+      relevanceFactors: [
+        {
+          code: "explicit_assurance_request",
+          label: "Explicit assurance request",
+          score: 100,
+          evidence: "Requested through the authenticated assurance API",
+        },
+      ],
       whyNow: "The operator requested a cross-agent context sync.",
       sourceRefs: fact.sourceRefs,
       createdAt: at,
-      expiresAt: fact.expiresAt ?? new Date(now.getTime() + 3 * 86_400_000).toISOString(),
+      expiresAt:
+        fact.expiresAt ??
+        new Date(now.getTime() + 3 * 86_400_000).toISOString(),
       dedupeKey: `assurance:${session.projectId}:${sessionId}`,
       correlationId: `corr-${id}`,
       traceId: id,
