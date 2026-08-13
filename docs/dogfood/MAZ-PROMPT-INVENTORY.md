@@ -5,7 +5,7 @@ Inventory of agent-facing prompts and system instructions discovered across Maz'
 ## 1. Unified Vault instructions (AGENTS.md)
 
 - **Repository:** `manazoid4/claude-obsidian` (Unified Vault)
-- **Path:** `C:\Users\manaz\claude-obsidian\AGENTS.md` (and mirrored in `C:\Users\manaz\Desktop\Obsidian Main Vault\AGENTS.md`)
+- **Path:** `%USERPROFILE%\claude-obsidian\AGENTS.md` (and mirrored in the user's Obsidian vault)
 - **Prompt Family:** Vault Setup & Navigation
 - **Mode:** Standing Orders
 - **Intended Agent:** All local agents (Claude Code, Codex, OpenCode, Hermes)
@@ -18,7 +18,7 @@ Inventory of agent-facing prompts and system instructions discovered across Maz'
 ## 2. MAZos v2 Loop Cockpit rules (AGENTS.md)
 
 - **Repository:** `manazoid4/mazos-ui`
-- **Path:** `C:\Users\manaz\Projects\mazos-ui\AGENTS.md`
+- **Path:** `%USERPROFILE%\Projects\mazos-ui\AGENTS.md`
 - **Prompt Family:** Loop Execution
 - **Mode:** Workflow Rules
 - **Intended Agent:** Hermes / Claude / Codex / OpenCode
@@ -44,20 +44,20 @@ Inventory of agent-facing prompts and system instructions discovered across Maz'
 ## 4. Recall Agent Rules
 
 - **Repository:** `manazoid4/recall`
-- **Path:** `C:\Users\manaz\Projects\recall\AGENTS.md`
+- **Path:** `%USERPROFILE%\Projects\recall\AGENTS.md`
 - **Prompt Family:** Project-specific constraints
 - **Mode:** Workflow Rules
 - **Intended Agent:** Claude / Codex
 - **Status:** Active
 - **Scope:** [PROJECT-SPECIFIC] / [PERSONAL DEFAULT]
-- **Strongest Reusable Pattern:** Declares clear source of truth priority (README/STATE.md > Repo Code > Obsidian Notes > session summaries) and flags stale directories to avoid (`C:\Users\manaz\saved-brain` is stale).
+- **Strongest Reusable Pattern:** Declares clear source of truth priority (README/STATE.md > Repo Code > Obsidian Notes > session summaries) and flags stale directories to avoid (`%USERPROFILE%\saved-brain` is stale).
 - **Evidence of Outcome:** Enforced privacy-first constraints and verification loops on Next.js/Chrome Extension tasks.
 - **Reason for Inclusion:** Standardizes clean-room testing and verification commands.
 
 ## 5. FlowLens apps/web Agent Rules
 
 - **Repository:** `manazoid4/flowlens`
-- **Path:** `C:\Users\manaz\flowlens\apps\web\AGENTS.md`
+- **Path:** `%USERPROFILE%\flowlens\apps\web\AGENTS.md`
 - **Prompt Family:** Framework Warning
 - **Mode:** Development
 - **Intended Agent:** Next.js developer agent
@@ -70,7 +70,7 @@ Inventory of agent-facing prompts and system instructions discovered across Maz'
 ## 6. OpenFlowKit Codex System Instructions
 
 - **Repository:** `manazoid4/openflowkit`
-- **Path:** `C:\Users\manaz\openflowkit\AGENTS.md`
+- **Path:** `%USERPROFILE%\openflowkit\AGENTS.md`
 - **Prompt Family:** Product Thesis
 - **Mode:** Standing Orders / Product Roadmap
 - **Intended Agent:** Codex
@@ -83,7 +83,7 @@ Inventory of agent-facing prompts and system instructions discovered across Maz'
 ## 7. SecureShift Agent Rules
 
 - **Repository:** `manazoid4/SecureShift`
-- **Path:** `C:\Users\manaz\SecureShift\AGENTS.md`
+- **Path:** `%USERPROFILE%\SecureShift\AGENTS.md`
 - **Prompt Family:** Product-specific constraints
 - **Mode:** Development
 - **Intended Agent:** Claude Code

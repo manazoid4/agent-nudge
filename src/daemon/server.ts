@@ -65,6 +65,9 @@ const runnerRequestSchema = z.object({
     .max(256 * 1024),
 });
 const evidenceStorageKind = "evidence" as Parameters<NudgeDatabase["put"]>[0];
+const assurancePolicySchema = z.object({
+  crossSyncDays: z.coerce.number().int().min(1).max(30).default(3),
+});
 
 export function createServer(
   database: NudgeDatabase,
@@ -283,6 +286,31 @@ export function createServer(
     generatedAt: new Date().toISOString(),
     providers: listProviderCapabilities(),
   }));
+  app.get("/v1/assurance", async (request, reply) => {
+    const parsed = assurancePolicySchema.safeParse(request.query);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_assurance_policy" });
+    return database.assurance(parsed.data);
+  });
+  app.get("/v1/assurance/:sessionId", async (request, reply) => {
+    const parsed = assurancePolicySchema.safeParse(request.query);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "invalid_assurance_policy" });
+    const sessionId = (request.params as { sessionId: string }).sessionId;
+    const result = database.assurance(parsed.data);
+    const agent = result.agents.find((item) => item.sessionId === sessionId);
+    return agent
+      ? { ...agent, generatedAt: result.generatedAt, policy: result.policy }
+      : reply.code(404).send({ error: "session_not_found" });
+  });
+  app.post("/v1/assurance/:sessionId/nudge", async (request, reply) => {
+    try {
+      const sessionId = (request.params as { sessionId: string }).sessionId;
+      return reply.code(201).send(database.requestAssuranceNudge(sessionId));
+    } catch (error) {
+      return sendLiveSyncError(reply, error);
+    }
+  });
   app.get("/v1/evidence", async (request, reply) => {
     const projectId = (request.query as { projectId?: string }).projectId;
     if (!projectId)

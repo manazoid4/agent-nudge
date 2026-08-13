@@ -12,6 +12,7 @@ import {
   toPeerPresence,
 } from "../core/live-sync.js";
 import { buildPortfolioSummary } from "../core/portfolio.js";
+import { buildAssurance, type AssurancePolicy } from "../core/assurance.js";
 import type {
   FeedbackReceipt,
   AgentEvent,
@@ -779,6 +780,87 @@ export class NudgeDatabase {
         queued: nudges.filter((item) => item.state === "queued").length,
       },
     };
+  }
+
+  assurance(policy?: Partial<AssurancePolicy>, now = new Date()) {
+    return buildAssurance({
+      sessions: this.list<AgentSession>("sessions"),
+      facts: this.list<ContextFact>("facts"),
+      nudges: this.list<Nudge>("nudges"),
+      receipts: this.list<FeedbackReceipt>("feedback"),
+      policy,
+      now,
+    });
+  }
+
+  requestAssuranceNudge(sessionId: string, now = new Date()) {
+    const session = this.get<AgentSession>("sessions", sessionId);
+    if (!session) throw new Error("session_not_found");
+    if (session.status === "ended") throw new Error("session_stopped");
+    const existing = this.list<Nudge>("nudges", session.projectId).find(
+      (item) =>
+        item.recipientSessionId === sessionId &&
+        item.extensionMetadata.assuranceRequest === true &&
+        ["queued", "delivered", "snoozed"].includes(item.state),
+    );
+    if (existing) return existing;
+    const at = now.toISOString();
+    const fact: ContextFact = {
+      id: `fact-assurance-${randomUUID()}`,
+      schemaVersion: 1,
+      projectId: session.projectId,
+      authorSessionId: "agent-nudge-assurance",
+      kind: "handoff",
+      title: "Cross-agent context sync requested",
+      summary:
+        "Share concise decisions, discoveries, failures, blockers, and changed context; acknowledge when incorporated.",
+      paths: [],
+      tags: ["assurance", "cross-sync"],
+      sourceRefs: [{ type: "manual", label: "Assurance API request" }],
+      confidence: 1,
+      createdAt: at,
+      effectiveAt: at,
+      expiresAt: new Date(now.getTime() + 3 * 86_400_000).toISOString(),
+      contradictsFactIds: [],
+      dependsOnFactIds: [],
+      invalidatesFactIds: [],
+      sensitivity: "normal",
+      extensionMetadata: { requestedForSessionId: sessionId },
+    };
+    this.put("facts", fact);
+    this.appendChange(session.projectId, "fact", fact.id, "published", at);
+    // A human explicitly pressed NUDGE. This is deterministic intent, not a
+    // relevance-scoring candidate, so it must not be suppressed by heuristics.
+    const id = `nudge-assurance-${randomUUID()}`;
+    const nudge: Nudge = {
+      id,
+      schemaVersion: 1,
+      factId: fact.id,
+      recipientSessionId: sessionId,
+      projectId: session.projectId,
+      title: fact.title,
+      body: fact.summary,
+      deliveryClass: "ACT_NOW",
+      state: "queued",
+      relevanceScore: 100,
+      relevanceFactors: [{
+        code: "explicit_assurance_request",
+        label: "Explicit assurance request",
+        score: 100,
+        evidence: "Requested through the authenticated assurance API",
+      }],
+      whyNow: "The operator requested a cross-agent context sync.",
+      sourceRefs: fact.sourceRefs,
+      createdAt: at,
+      expiresAt: fact.expiresAt ?? new Date(now.getTime() + 3 * 86_400_000).toISOString(),
+      dedupeKey: `assurance:${session.projectId}:${sessionId}`,
+      correlationId: `corr-${id}`,
+      traceId: id,
+      extensionMetadata: { assuranceRequest: true },
+    };
+    this.put("nudges", nudge);
+    this.appendChange(session.projectId, "nudge", nudge.id, "queued", at);
+    return nudge;
   }
 
   contextPack(projectId: string, recipientSessionId?: string) {

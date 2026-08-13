@@ -31,7 +31,7 @@ Do not sell a recurring individual plan for a local-only utility. Keep recurring
 ### P0 — fix before taking payments
 
 1. **Authenticate the localhost control plane.** It can write repository files and launch agent processes, but currently has no bearer/session authentication. CORS is not authentication, and allowing the `null` origin lets locally opened HTML make requests. Generate an installation secret, expose it only through Electron preload, require it on every mutating route, remove the `null` origin, and show a launch confirmation with executable, working directory, and brief digest.
-2. **Replace the developer-specific repository default.** `src/ui/App.tsx` currently opens `C:\Users\manaz\Projects\agent-nudge`. First run must show a native folder chooser, recent repositories, and a one-command fallback.
+2. **Replace the generic repository default.** `src/ui/App.tsx` currently opens the daemon working directory. First run must show a native folder chooser, recent repositories, and a one-command fallback.
 3. **Prove the production license-signing chain.** The hosted signing key and the public key embedded in desktop builds must be a deliberate matching pair. Add a release test that creates a checkout entitlement, redeems it, and activates it in the packaged app.
 4. **Fix the payment configuration contract.** `.env.example` documents `PUBLIC_APP_URL`, but `src/commerce/http.ts` reads `PUBLIC_SITE_URL`. Use one validated name everywhere.
 5. **Model the real license lifecycle.** A redeemed license currently expires one year after redemption rather than at the authoritative Stripe entitlement boundary. Store entitlement/revocation state, handle refunds and cancellation, and bind/recover devices deliberately.

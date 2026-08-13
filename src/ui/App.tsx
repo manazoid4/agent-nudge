@@ -1995,7 +1995,7 @@ type RunnerJob = {
 };
 
 function CompilerView({ isPublicDemo }: { isPublicDemo: boolean }) {
-  const [repo, setRepo] = useState("C:\\Users\\manaz\\Projects\\agent-nudge");
+  const [repo, setRepo] = useState(".");
   const [objective, setObjective] = useState(
     "Implement the next highest-value product improvement",
   );

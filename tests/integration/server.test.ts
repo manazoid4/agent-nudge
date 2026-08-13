@@ -9,6 +9,32 @@ afterEach(async () => {
 });
 
 describe("localhost API", () => {
+  it("serves the portable assurance summary and queues an explicit nudge", async () => {
+    const db = new NudgeDatabase(":memory:");
+    const app = createTestServer(db);
+    close.push(async () => { await app.close(); db.close(); });
+    const now = new Date();
+    db.checkIn({
+      sessionId: "codex-pocket",
+      provider: "codex",
+      projectId: "maz-pocket",
+      projectName: "MAZ Pocket",
+      cwd: "C:/repo",
+    }, new Date(now.getTime() - 4 * 86_400_000));
+    db.heartbeat("maz-pocket", "codex-pocket", undefined, now);
+
+    const summary = await app.inject({ method: "GET", url: "/v1/assurance" });
+    expect(summary.statusCode).toBe(200);
+    expect(summary.json()).toMatchObject({ state: "OVERDUE", counts: { active: 1 } });
+
+    const nudge = await app.inject({ method: "POST", url: "/v1/assurance/codex-pocket/nudge" });
+    expect(nudge.statusCode).toBe(201);
+    expect(nudge.json()).toMatchObject({ recipientSessionId: "codex-pocket", state: "queued" });
+    const repeated = await app.inject({ method: "POST", url: "/v1/assurance/codex-pocket/nudge" });
+    expect(repeated.json().id).toBe(nudge.json().id);
+    expect(db.list("facts", "maz-pocket")).toHaveLength(1);
+  });
+
   it("runs all proof scenarios through the real API and storage", async () => {
     const db = new NudgeDatabase(":memory:");
     const app = createTestServer(db);

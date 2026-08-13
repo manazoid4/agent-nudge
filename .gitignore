@@ -7,6 +7,7 @@ coverage/
 test-results/
 .nyc_output/
 .vercel/
+.codebase-memory/
 *.db
 *.db-shm
 *.db-wal
